@@ -1,0 +1,15 @@
+{
+  "name": "ems-frontend",
+  "version": "1.0.0",
+  "description": "Electron frontend for Event Management System",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^26.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
+

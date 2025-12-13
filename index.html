@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Event Management System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- MAIN MENU -->
+<div id="main-menu" class="menu">
+    <h1>EMS - Main Menu</h1>
+    <button id="org-btn">Organiser</button>
+    <button id="cust-btn">Customer</button>
+</div>
+
+<!-- ORGANISER MENU -->
+<div id="organiser-menu" class="menu hidden">
+    <h1>Organiser Menu</h1>
+    <button id="org-signup-btn">Signup</button>
+    <button id="org-login-btn">Login</button>
+    <button id="org-back-btn">Back</button>
+</div>
+
+<!-- CUSTOMER MENU -->
+<div id="customer-menu" class="menu hidden">
+    <h1>Customer Menu</h1>
+    <button id="cust-signup-btn">Signup</button>
+    <button id="cust-login-btn">Login</button>
+    <button id="cust-back-btn">Back</button>
+</div>
+
+<!-- EVENT MENU -->
+<div id="event-menu" class="menu hidden">
+    <h1>Events Menu</h1>
+    <button id="add-event-btn">Add Event</button>
+    <button id="modify-event-btn">Modify Event</button>
+    <button id="delete-event-btn">Delete Event</button>
+    <button id="view-details-btn">View Details</button>
+    <button id="event-back-btn">Back</button>
+
+        <!-- Events table -->
+        <div class="events-table-wrap">
+            <table id="events-table" class="events-table">
+                <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Venue</th>
+                        <th>Event ID</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Total Seats</th>
+                        <th>Tickets Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- rows will be added dynamically or left empty -->
+                </tbody>
+            </table>
+        </div>
+</div>
+
+<!-- DETAILS MENU -->
+<div id="details-menu" class="menu hidden">
+    <h1>Event Details</h1>
+    <div style="display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:12px;">
+        <div><strong>Selected Event:</strong> <span id="view-details-event-name">(none)</span> <small id="view-details-event-id-span"></small></div>
+    </div>
+    <button id="details-customers-btn">Customers</button>
+    <button id="details-staff-menu-btn">Staff Menu</button>
+    <button id="details-vendors-menu-btn">Vendors Menu</button>
+    <button id="details-back-btn">Back</button>
+</div>
+
+<!-- STAFF MENU -->
+<div id="staff-menu" class="menu hidden">
+    <h1>Staff Management</h1>
+    <button id="add-staff-btn">Add Staff</button>
+    <button id="modify-staff-btn">Modify Staff</button>
+    <button id="delete-staff-btn">Delete Staff</button>
+    <button id="staff-back-btn">Back</button>
+
+    <!-- Staff table -->
+    <div class="events-table-wrap">
+        <table id="staff-table" class="events-table">
+            <thead>
+                <tr>
+                    <th>Staff ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- VENDORS MENU -->
+<div id="vendors-menu" class="menu hidden">
+    <h1>Vendor Management</h1>
+    <button id="add-vendor-btn">Add Vendor</button>
+    <button id="modify-vendor-btn">Modify Vendor</button>
+    <button id="delete-vendor-btn">Delete Vendor</button>
+    <button id="vendors-back-btn">Back</button>
+
+    <!-- Vendors table -->
+    <div class="events-table-wrap">
+        <table id="vendors-table" class="events-table">
+            <thead>
+                <tr>
+                    <th>Vendor ID</th>
+                    <th>Name</th>
+                    <th>Service</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- View Details Request Modal -->
+<div id="view-details-request-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Open Event Details</h2>
+            <button class="close" data-close="view-details-request-modal">×</button>
+        </div>
+        <form id="view-details-request-form" class="modal-form">
+            <label for="view-details-event-id">Enter Event ID</label>
+            <input id="view-details-event-id" name="id" type="text" required>
+            <div class="modal-actions">
+                <button type="submit">Open Details</button>
+                <button type="button" data-close="view-details-request-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CUSTOMER EVENT REGISTRATION MENU -->
+<div id="customer-event-menu" class="menu hidden">
+    <h1>Customer Event Registration</h1>
+    <button id="register-event-btn">Register for Event</button>
+    <button id="view-registrations-btn">View My Registrations</button>
+    <button id="customer-back-btn">Back</button>
+    
+        <!-- Customer events table (hidden until customer logs in) -->
+        <div id="customer-events-table-wrap" class="events-table-wrap hidden">
+            <table id="customer-events-table" class="events-table">
+                <thead>
+                    <tr>
+                        <th>Event Name</th>
+                        <th>Venue</th>
+                        <th>Event ID</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Total Seats</th>
+                        <th>Tickets Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+</div>
+
+<!-- LOGIN & SIGNUP MODALS -->
+<div id="modal-overlay" class="modal-overlay hidden"></div>
+
+<!-- Login Modal -->
+<div id="login-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Login</h2>
+            <button class="close" data-close="login-modal">×</button>
+        </div>
+        <form id="login-form" class="modal-form">
+            <label for="login-username">Username</label>
+            <input id="login-username" name="username" type="text" required>
+
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" required>
+
+            <div class="modal-actions">
+                <button type="submit">Login</button>
+                <button type="button" id="login-to-signup">Create account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Signup Modal -->
+<div id="signup-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Sign Up</h2>
+            <button class="close" data-close="signup-modal">×</button>
+        </div>
+        <form id="signup-form" class="modal-form">
+            <label for="signup-username">Username</label>
+            <input id="signup-username" name="username" type="text" required>
+
+            <label for="signup-name">Full name</label>
+            <input id="signup-name" name="name" type="text" required>
+
+            <label for="signup-email">Contact Email</label>
+            <input id="signup-email" name="email" type="email" required>
+
+            <label for="signup-password">Password</label>
+            <input id="signup-password" name="password" type="password" required>
+
+            <label for="signup-password-confirm">Confirm password</label>
+            <input id="signup-password-confirm" name="passwordConfirm" type="password" required>
+
+            <div class="modal-actions">
+                <button type="submit">Create account</button>
+                <button type="button" id="signup-to-login">Already have account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Staff Modal -->
+<div id="add-staff-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Staff</h2>
+            <button class="close" data-close="add-staff-modal">×</button>
+        </div>
+        <form id="add-staff-form" class="modal-form">
+            <label for="add-staff-name">Staff Name</label>
+            <input id="add-staff-name" name="name" type="text" required>
+
+            <label for="add-staff-role">Role</label>
+            <input id="add-staff-role" name="role" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Add Staff</button>
+                <button type="button" data-close="add-staff-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modify Staff Request Modal -->
+<div id="modify-staff-request-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Modify Staff</h2>
+            <button class="close" data-close="modify-staff-request-modal">×</button>
+        </div>
+        <form id="modify-staff-request-form" class="modal-form">
+            <label for="modify-staff-id">Enter Staff ID to modify</label>
+            <input id="modify-staff-id" name="id" type="text" required>
+            <div class="modal-actions">
+                <button type="submit">Load Staff</button>
+                <button type="button" data-close="modify-staff-request-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div id="edit-staff-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Staff</h2>
+            <button class="close" data-close="edit-staff-modal">×</button>
+        </div>
+        <form id="edit-staff-form" class="modal-form">
+            <input id="edit-staff-id" name="id" type="hidden">
+
+            <label for="edit-staff-name">Staff Name</label>
+            <input id="edit-staff-name" name="name" type="text" required>
+
+            <label for="edit-staff-role">Role</label>
+            <input id="edit-staff-role" name="role" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" data-close="edit-staff-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Staff Modal -->
+<div id="delete-staff-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Staff</h2>
+            <button class="close" data-close="delete-staff-modal">×</button>
+        </div>
+        <form id="delete-staff-form" class="modal-form">
+            <label for="delete-staff-id">Staff ID</label>
+            <input id="delete-staff-id" name="id" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Delete Staff</button>
+                <button type="button" data-close="delete-staff-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Vendor Modal -->
+<div id="add-vendor-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Vendor</h2>
+            <button class="close" data-close="add-vendor-modal">×</button>
+        </div>
+        <form id="add-vendor-form" class="modal-form">
+            <label for="add-vendor-name">Vendor Name</label>
+            <input id="add-vendor-name" name="name" type="text" required>
+
+            <label for="add-vendor-service">Service</label>
+            <input id="add-vendor-service" name="service" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Add Vendor</button>
+                <button type="button" data-close="add-vendor-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modify Vendor Request Modal -->
+<div id="modify-vendor-request-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Modify Vendor</h2>
+            <button class="close" data-close="modify-vendor-request-modal">×</button>
+        </div>
+        <form id="modify-vendor-request-form" class="modal-form">
+            <label for="modify-vendor-id">Enter Vendor ID to modify</label>
+            <input id="modify-vendor-id" name="id" type="text" required>
+            <div class="modal-actions">
+                <button type="submit">Load Vendor</button>
+                <button type="button" data-close="modify-vendor-request-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Vendor Modal -->
+<div id="edit-vendor-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Vendor</h2>
+            <button class="close" data-close="edit-vendor-modal">×</button>
+        </div>
+        <form id="edit-vendor-form" class="modal-form">
+            <input id="edit-vendor-id" name="id" type="hidden">
+
+            <label for="edit-vendor-name">Vendor Name</label>
+            <input id="edit-vendor-name" name="name" type="text" required>
+
+            <label for="edit-vendor-service">Service</label>
+            <input id="edit-vendor-service" name="service" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" data-close="edit-vendor-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Vendor Modal -->
+<div id="delete-vendor-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Vendor</h2>
+            <button class="close" data-close="delete-vendor-modal">×</button>
+        </div>
+        <form id="delete-vendor-form" class="modal-form">
+            <label for="delete-vendor-id">Vendor ID</label>
+            <input id="delete-vendor-id" name="id" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Delete Vendor</button>
+                <button type="button" data-close="delete-vendor-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Event Modal -->
+<div id="add-event-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Event</h2>
+            <button class="close" data-close="add-event-modal">×</button>
+        </div>
+        <form id="add-event-form" class="modal-form">
+            <label for="add-event-name">Event Name</label>
+            <input id="add-event-name" name="name" type="text" required>
+
+            <label for="add-event-start">Start Date</label>
+            <input id="add-event-start" name="start" type="date" required>
+
+            <label for="add-event-end">End Date</label>
+            <input id="add-event-end" name="end" type="date" required>
+
+            <label for="add-event-venue">Venue</label>
+            <input id="add-event-venue" name="venue" type="text" required>
+
+            <label for="add-event-seats">Total Seats</label>
+            <input id="add-event-seats" name="totalSeats" type="number" min="0" required>
+
+            <div class="modal-actions">
+                <button type="submit">Add Event</button>
+                <button type="button" id="add-event-cancel" data-close="add-event-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Event Modal -->
+<div id="delete-event-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Delete Event</h2>
+            <button class="close" data-close="delete-event-modal">×</button>
+        </div>
+        <form id="delete-event-form" class="modal-form">
+            <label for="delete-event-id">Event ID</label>
+            <input id="delete-event-id" name="id" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Delete Event</button>
+                <button type="button" data-close="delete-event-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modify Event: Request ID Modal -->
+<div id="modify-request-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Modify Event</h2>
+            <button class="close" data-close="modify-request-modal">×</button>
+        </div>
+        <form id="modify-request-form" class="modal-form">
+            <label for="modify-event-id">Enter Event ID to modify</label>
+            <input id="modify-event-id" name="id" type="text" required>
+            <div class="modal-actions">
+                <button type="submit">Load Event</button>
+                <button type="button" data-close="modify-request-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Event Modal (prefilled editable fields) -->
+<div id="edit-event-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Event</h2>
+            <button class="close" data-close="edit-event-modal">×</button>
+        </div>
+        <form id="edit-event-form" class="modal-form">
+            <input id="edit-event-id" name="id" type="hidden">
+
+            <label for="edit-event-name">Event Name</label>
+            <input id="edit-event-name" name="name" type="text" required>
+
+            <label for="edit-event-start">Start Date</label>
+            <input id="edit-event-start" name="start" type="date" required>
+
+            <label for="edit-event-end">End Date</label>
+            <input id="edit-event-end" name="end" type="date" required>
+
+            <label for="edit-event-seats">Total Seats</label>
+            <input id="edit-event-seats" name="totalSeats" type="number" min="0" required>
+
+            <label for="edit-event-venue">Venue</label>
+            <input id="edit-event-venue" name="venue" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Save Changes</button>
+                <button type="button" data-close="edit-event-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Register Event Modal (customer) -->
+<div id="register-event-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Register for Event</h2>
+            <button class="close" data-close="register-event-modal">×</button>
+        </div>
+        <form id="register-event-form" class="modal-form">
+            <label for="register-event-id">Event ID</label>
+            <input id="register-event-id" name="id" type="text" required>
+
+            <div class="modal-actions">
+                <button type="submit">Register</button>
+                <button type="button" data-close="register-event-modal" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Registrations Modal -->
+<div id="registrations-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>My Registrations</h2>
+            <button class="close" data-close="registrations-modal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="events-table-wrap">
+                <table id="registrations-table" class="events-table">
+                    <thead>
+                        <tr>
+                            <th>Event Name</th>
+                            <th>Venue</th>
+                            <th>Event ID</th>
+                            <th>Fee Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" data-close="registrations-modal" class="btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Event Customers List Modal -->
+<div id="event-customers-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Registered Customers</h2>
+            <button class="close" data-close="event-customers-modal">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="events-table-wrap">
+                <table id="event-customers-table" class="events-table">
+                    <thead>
+                        <tr>
+                            <th>Customer ID</th>
+                            <th>Fee Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" data-close="event-customers-modal" class="btn-secondary">Close</button>
+        </div>
+    </div>
+</div>
+
+
+<script src="renderer.js"></script>
+
+</body>
+</html>
+
