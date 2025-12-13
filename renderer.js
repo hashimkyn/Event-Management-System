@@ -138,6 +138,13 @@ const sampleVendors = [
     { vendorId: 'V003', name: 'Floral Designs', service: 'Decorations', eventId: 'E1002' }
 ];
 
+// Add this sample customer data near the top with other sample data
+const sampleCustomers = [
+    { customerId: 'CUST-001', name: 'John Doe', email: 'john@example.com' },
+    { customerId: 'CUST-002', name: 'Jane Smith', email: 'jane@example.com' },
+    { customerId: 'CUST-003', name: 'Bob Wilson', email: 'bob@example.com' }
+];
+
 function openViewDetailsRequest() {
     if (!viewDetailsRequestModal) {
         showMessage('Details request dialog is not available.', 'error');
@@ -168,24 +175,29 @@ function closeModal(modalEl) {
 }
 
 function openLogin(role) {
+    clearForm('login-form');
     loginModal.dataset.role = role; // 'organiser' or 'customer'
     openModal(loginModal);
 }
 
 function openSignup(role) {
+    clearForm('signup-form');
     signupModal.dataset.role = role;
     openModal(signupModal);
 }
 
 function openAddEvent() {
+    clearForm('add-event-form');
     openModal(addEventModal);
 }
 
 function openDeleteEvent() {
+    clearForm('delete-event-form');
     openModal(deleteEventModal);
 }
 
 function openModifyRequest() {
+    clearForm('modify-request-form');
     openModal(modifyRequestModal);
 }
 
@@ -204,6 +216,7 @@ function openRegistrationsModal() {
 }
 
 function openRegisterEvent() {
+    clearForm('register-event-form');
     if (!registerEventModal) {
         console.error('Register modal element not found');
         showMessage('Registration dialog is not available. Please reload the application.', 'error');
@@ -271,9 +284,13 @@ function renderCustomersForCurrentEvent() {
     tbody.innerHTML = '';
     const filtered = sampleRegistrations.filter(r => r.eventId === currentViewEventId);
     filtered.forEach((reg, idx) => {
+        const customer = sampleCustomers[idx % sampleCustomers.length]; // Get customer data
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>CUST-${idx + 1}</td>
+            <td>${customer.customerId}</td>
+            <td>${customer.name}</td>
+            <td>${customer.email}</td>
+            <td>TICKET-${String(idx + 1).padStart(4, '0')}</td>
             <td>${reg.paid ? 'Paid' : 'Unpaid'}</td>
             <td><button class="btn-secondary" onclick="togglePaidForCurrent('${reg.eventId}', ${idx})">Toggle Paid</button></td>
         `;
@@ -621,32 +638,38 @@ function renderVendorsTable() {
 
 // STAFF CRUD FUNCTIONS
 function openAddStaff() {
+    clearForm('add-staff-form');
     document.getElementById('add-staff-form').reset();
     openModal(addStaffModal);
 }
 
 function openModifyStaffRequest() {
+    clearForm('modify-staff-request-form');
     document.getElementById('modify-staff-request-form').reset();
     openModal(modifyStaffRequestModal);
 }
 
 function openDeleteStaff() {
+    clearForm('delete-staff-form');
     document.getElementById('delete-staff-form').reset();
     openModal(deleteStaffModal);
 }
 
 // VENDOR CRUD FUNCTIONS
 function openAddVendor() {
+    clearForm('add-vendor-form');
     document.getElementById('add-vendor-form').reset();
     openModal(addVendorModal);
 }
 
 function openModifyVendorRequest() {
+    clearForm('modify-vendor-request-form');
     document.getElementById('modify-vendor-request-form').reset();
     openModal(modifyVendorRequestModal);
 }
 
 function openDeleteVendor() {
+    clearForm('delete-vendor-form');
     document.getElementById('delete-vendor-form').reset();
     openModal(deleteVendorModal);
 }
@@ -788,3 +811,9 @@ document.getElementById('edit-vendor-form').onsubmit = (e) => {
     closeModal(editVendorModal);
     renderVendorsTable();
 };
+
+// Add this helper function at the top of the file
+function clearForm(formId) {
+    const form = document.getElementById(formId);
+    if (form) form.reset();
+}

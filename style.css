@@ -97,7 +97,30 @@ button:hover {
 .modal-content { padding: 18px 22px; }
 .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
 .modal-header h2 { margin:0; font-size:20px; }
-.close { background:transparent; border:0; font-size:22px; cursor:pointer; }
+.close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #333;  /* Change from white to dark color */
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.close:hover {
+    background-color: #f0f0f0;  /* Light gray background on hover */
+    color: #000;
+}
 
 .modal-form { display:flex; flex-direction:column; gap:8px; }
 .modal-form label { text-align:left; font-size:13px; color:#333; }
