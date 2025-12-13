@@ -5,37 +5,30 @@ const backend = require('./backend-bridge');
 let mainWindow;
 
 function createWindow() {
-    mainWindow = new BrowserWindow({
+    const win = new BrowserWindow({
         width: 1200,
         height: 800,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            enableRemoteModule: false,
             nodeIntegration: false,
-            sandbox: true
+            contextIsolation: true
         }
     });
 
-    mainWindow.loadFile('index.html');
-
-    // ======================= CONTENT SECURITY POLICY =======================
-    mainWindow.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-        callback({
-            responseHeaders: {
-                ...details.responseHeaders,
-                'Content-Security-Policy': [
-                    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;"
-                ]
-            }
-        });
-    });
+    win.loadFile('index.html');
+    
+    // Remove or comment out this line to disable DevTools on startup:
+    // win.webContents.openDevTools();
+    
+    return win;
 }
 
 app.on('ready', createWindow);
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin') {
+        app.quit();
+    }
 });
 
 // ======================= ORGANISER IPC =======================
@@ -49,10 +42,10 @@ ipcMain.handle('customer:register', async (event, data) => backend.customerRegis
 ipcMain.handle('customer:getRegistrations', async (event, custID) => backend.customerGetRegistrations(custID));
 
 // ======================= EVENT IPC =======================
-ipcMain.handle('event:add', async (event, data) => backend.eventAdd(data));
-ipcMain.handle('event:getAll', async (event) => backend.eventGetAll());
-ipcMain.handle('event:modify', async (event, data) => backend.eventModify(data));
-ipcMain.handle('event:delete', async (event, eventID) => backend.eventDelete(eventID));
+ipcMain.handle('event:add', async (event, data) => backend.addEvent(data));
+ipcMain.handle('event:getAll', async (event) => backend.getAllEvents());
+ipcMain.handle('event:modify', async (event, data) => backend.modifyEvent(data));
+ipcMain.handle('event:delete', async (event, eventID) => backend.deleteEvent(eventID));
 
 // ======================= STAFF IPC =======================
 ipcMain.handle('staff:add', async (event, data) => backend.staffAdd(data));

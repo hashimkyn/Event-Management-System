@@ -9,7 +9,7 @@
 
 <!-- MAIN MENU -->
 <div id="main-menu" class="menu">
-    <h1>EMS - Main Menu</h1>
+    <h1>Event Management System</h1>
     <button id="org-btn">Organiser</button>
     <button id="cust-btn">Customer</button>
 </div>
@@ -24,50 +24,44 @@
 
 <!-- CUSTOMER MENU -->
 <div id="customer-menu" class="menu hidden">
-    <h2>Customer Menu</h2>
-    <div class="button-group">
-        <button id="cust-signup-btn">Sign Up</button>
-        <button id="cust-login-btn">Login</button>
-        <button id="cust-back-btn">Back</button>
-    </div>
+    <h1>Customer Menu</h1>
+    <button id="cust-signup-btn">Sign Up</button>
+    <button id="cust-login-btn">Login</button>
+    <button id="cust-back-btn">Back</button>
 </div>
 
 <!-- CUSTOMER EVENT MENU -->
 <div id="customer-event-menu" class="menu hidden">
-    <h2>Events</h2>
-    <div class="button-group">
-        <button id="register-event-btn">Register for Event</button>
-        <button id="view-registrations-btn">View My Registrations</button>
-        <button id="customer-back-btn">Back</button>
-    </div>
-    
-    <h3>Available Events</h3>
+    <h2>Customer - Events</h2>
+    <button id="register-event-btn" style="margin-bottom: 10px;">Register for Event</button>
+    <button id="view-registrations-btn" style="margin-bottom: 10px;">View My Registrations</button>
+    <button id="customer-events-back-btn" style="margin-bottom: 20px;">Back</button>
     <table id="customer-events-table" class="events-table">
         <thead>
             <tr>
+                <th>Event ID</th>
                 <th>Event Name</th>
                 <th>Venue</th>
-                <th>Event ID</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Total Seats</th>
                 <th>Sold Tickets</th>
             </tr>
         </thead>
-        <tbody></tbody>
+        <tbody>
+            <tr><td colspan="7">Loading...</td></tr>
+        </tbody>
     </table>
 </div>
 
 <!-- EVENT MENU -->
 <div id="event-menu" class="menu hidden">
     <h2>Events Management</h2>
-    <div class="button-group">
-        <button id="add-event-btn">Add Event</button>
-        <button id="modify-event-btn">Modify Event</button>
-        <button id="delete-event-btn">Delete Event</button>
-        <button id="event-details-btn">View Details</button>
-        <button id="event-back-btn">Back</button>
-    </div>
+    <button id="add-event-btn" style="margin-bottom: 10px;">Add Event</button>
+    <button id="modify-event-btn" style="margin-bottom: 10px;">Modify Event</button>
+    <button id="delete-event-btn" style="margin-bottom: 10px;">Delete Event</button>
+    <button id="event-details-btn" style="margin-bottom: 10px;">View Details</button>
+    <button id="event-back-btn" style="margin-bottom: 20px;">Back</button>
     
     <h3>Your Events</h3>
     <table id="events-table" class="events-table">
@@ -569,7 +563,7 @@
 </div>
 
 
-<script src="renderer.js"></script>
+<script defer src="renderer.js"></script>
 
 </body>
 </html>

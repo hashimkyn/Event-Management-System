@@ -42,43 +42,52 @@ function clearForm(formId) {
 
 // ======================= LOGIN & SIGNUP =======================
 async function openLogin(userType) {
-    clearForm('login-form');
     const modal = document.getElementById('login-modal');
     const overlay = document.getElementById('modal-overlay');
     
-    modal.dataset.userType = userType;
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
-    const submitBtn = modal.querySelector('button[type="submit"]');
-    submitBtn.onclick = async (e) => {
+    const loginForm = document.getElementById('login-form');
+    const loginToSignup = document.getElementById('login-to-signup');
+    
+    loginToSignup.onclick = () => {
+        modal.classList.add('hidden');
+        openSignup(userType);
+    };
+    
+    loginForm.onsubmit = async (e) => {
         e.preventDefault();
-        
-        const username = modal.querySelector('#login-username').value.trim();
-        const password = modal.querySelector('#login-password').value.trim();
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value.trim();
         
         if (!username || !password) {
-            showMessage('Please fill all fields', 'error');
+            showMessage('Please enter username and password', 'error');
             return;
         }
         
         try {
-            const result = userType === 'organiser' 
-                ? await window.api.organiserLogin(username, password)
-                : await window.api.customerLogin(username, password);
+            let result;
+            if (userType === 'organiser') {
+                result = await window.api.organiserLogin(username, password);
+            } else {
+                result = await window.api.customerLogin(username, password);
+            }
             
             if (result.success) {
                 currentUser = result.user;
+                showMessage(`Welcome ${currentUser.name}!`, 'success');
+                
                 modal.classList.add('hidden');
                 overlay.classList.add('hidden');
-                showMessage(`Welcome ${result.user.name}!`, 'success');
+                document.getElementById('login-username').value = '';
+                document.getElementById('login-password').value = '';
                 
+                // Navigate to appropriate menu
                 if (userType === 'organiser') {
-                    showMenu('events');
-                    setTimeout(() => loadEventsTable(), 100);
+                    loadOrganizerEvents();
                 } else {
-                    showMenu('customerEvents');
-                    setTimeout(() => loadCustomerEventsTable(), 100);
+                    showCustomerEventMenu();
                 }
             } else {
                 showMessage(result.message || 'Login failed', 'error');
@@ -90,26 +99,31 @@ async function openLogin(userType) {
 }
 
 async function openSignup(userType) {
-    clearForm('signup-form');
     const modal = document.getElementById('signup-modal');
     const overlay = document.getElementById('modal-overlay');
     
-    modal.dataset.userType = userType;
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
-    const submitBtn = modal.querySelector('button[type="submit"]');
-    submitBtn.onclick = async (e) => {
+    const signupForm = document.getElementById('signup-form');
+    const signupToLogin = document.getElementById('signup-to-login');
+    
+    signupToLogin.onclick = () => {
+        modal.classList.add('hidden');
+        openLogin(userType);
+    };
+    
+    signupForm.onsubmit = async (e) => {
         e.preventDefault();
         
-        const name = modal.querySelector('#signup-name').value.trim();
-        const email = modal.querySelector('#signup-email').value.trim();
-        const username = modal.querySelector('#signup-username').value.trim();
-        const password = modal.querySelector('#signup-password').value.trim();
-        const passwordConfirm = modal.querySelector('#signup-password-confirm').value.trim();
+        const username = document.getElementById('signup-username').value.trim();
+        const name = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value.trim();
+        const passwordConfirm = document.getElementById('signup-password-confirm').value.trim();
         
-        if (!name || !email || !username || !password || !passwordConfirm) {
-            showMessage('Please fill all required fields', 'error');
+        if (!username || !name || !email || !password || !passwordConfirm) {
+            showMessage('Please fill all fields', 'error');
             return;
         }
         
@@ -119,17 +133,22 @@ async function openSignup(userType) {
         }
         
         try {
-            const data = { name, email, username, password };
-            
-            const result = userType === 'organiser'
-                ? await window.api.organiserSignup(data)
-                : await window.api.customerSignup(data);
+            let result;
+            if (userType === 'organiser') {
+                result = await window.api.organiserSignup({
+                    username, name, email, password
+                });
+            } else {
+                result = await window.api.customerSignup({
+                    username, name, email, password
+                });
+            }
             
             if (result.success) {
-                showMessage(`${userType === 'organiser' ? 'Organiser' : 'Customer'} registered! ID: ${result.ID}`, 'success');
+                showMessage('Account created! Please login.', 'success');
+                
                 modal.classList.add('hidden');
-                overlay.classList.add('hidden');
-                clearForm('signup-form');
+                setTimeout(() => openLogin(userType), 500);
             } else {
                 showMessage(result.message || 'Signup failed', 'error');
             }
@@ -220,6 +239,40 @@ async function loadEventsTable() {
     }
 }
 
+async function loadCustomerEventsTable() {
+    try {
+        const tbody = document.querySelector('#customer-events-table tbody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+
+        const result = await window.api.eventGetAll();
+
+        if (!result.success || !result.events || result.events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No events available</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        result.events.forEach(ev => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${ev.ID}</td>
+                <td>${ev.name || 'N/A'}</td>
+                <td>${ev.venue || 'N/A'}</td>
+                <td>${ev.startDate || 'N/A'}</td>
+                <td>${ev.endDate || 'N/A'}</td>
+                <td>${ev.totalSeats || 0}</td>
+                <td>${ev.soldTickets || 0}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (err) {
+        const tbody = document.querySelector('#customer-events-table tbody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7">Error loading events</td></tr>`;
+    }
+}
+
 function createModifyRequestModal() {
     const modal = document.createElement('div');
     modal.id = 'modify-request-modal';
@@ -244,17 +297,23 @@ function createModifyRequestModal() {
 }
 
 async function openModifyRequest() {
-    clearForm('modify-request-form');
     const modal = document.getElementById('modify-request-modal') || createModifyRequestModal();
     const overlay = document.getElementById('modal-overlay');
+    
+    // Reset the form to initial state
+    modal.querySelector('form').innerHTML = `
+        <label for="modify-event-id">Event ID</label>
+        <input id="modify-event-id" type="number" required placeholder="Enter Event ID">
+        <div class="modal-actions">
+            <button type="submit">Find Event</button>
+        </div>
+    `;
     
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
-    const submitBtn = modal.querySelector('button[type="submit"]');
-    submitBtn.textContent = 'Find Event';
-    
-    submitBtn.onclick = async (e) => {
+    const form = modal.querySelector('form');
+    form.onsubmit = async (e) => {
         e.preventDefault();
         const eventIDStr = document.getElementById('modify-event-id')?.value.trim();
         
@@ -314,12 +373,7 @@ function showModifyEventForm(event, modal, overlay) {
         </div>
     `;
     
-    document.getElementById('modify-back-btn').onclick = (e) => {
-        e.preventDefault();
-        openModifyRequest();
-    };
-    
-    document.getElementById('modify-save-btn').onclick = async (e) => {
+    form.onsubmit = async (e) => {
         e.preventDefault();
         
         const name = document.getElementById('modify-event-name')?.value.trim();
@@ -349,6 +403,11 @@ function showModifyEventForm(event, modal, overlay) {
         } catch (error) {
             showMessage(`Error: ${error.message}`, 'error');
         }
+    };
+    
+    document.getElementById('modify-back-btn').onclick = (e) => {
+        e.preventDefault();
+        openModifyRequest();
     };
 }
 
@@ -435,8 +494,8 @@ async function openEventDetails() {
     document.body.appendChild(modal);
     
     const eventsList = modal.querySelector('#events-list');
-    eventsList.innerHTML = result.events.map((event, index) => `
-        <div data-event-id="${event.ID}" data-event-index="${index}" style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; cursor: pointer; border-radius: 4px; background: #fff;">
+    eventsList.innerHTML = result.events.map((event) => `
+        <div data-event-id="${event.ID}" style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; cursor: pointer; border-radius: 4px; background: #fff;">
             <strong>${event.name}</strong> (ID: ${event.ID})<br>
             <small>${event.venue} | ${event.startDate}</small>
         </div>
@@ -481,53 +540,111 @@ async function selectEventDetail(eventID) {
     }
 }
 
-async function openRegistrationsModal() {
-    if (!currentUser || !currentUser.ID) {
-        showMessage('Please login to view registrations', 'error');
-        return;
-    }
+// ======================= EVENT DETAILS PAGE =======================
+function updateEventDetailsMenu(event) {
+    const detailsMenu = document.getElementById('details-menu');
+    
+    detailsMenu.innerHTML = `
+        <h2>${event.name} - Details</h2>
+        
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p><strong>Event ID:</strong> ${event.ID}</p>
+            <p><strong>Venue:</strong> ${event.venue}</p>
+            <p><strong>Start Date:</strong> ${event.startDate}</p>
+            <p><strong>End Date:</strong> ${event.endDate}</p>
+            <p><strong>Seats:</strong> ${event.soldTickets}/${event.totalSeats}</p>
+        </div>
+        
+        <button id="details-customer-data-btn" style="margin-right: 10px; margin-bottom: 10px;">Customer Data</button>
+        <button id="details-edit-staff-btn" style="margin-right: 10px; margin-bottom: 10px;">Edit Staff</button>
+        <button id="details-edit-vendor-btn" style="margin-right: 10px; margin-bottom: 10px;">Edit Vendors</button>
+        <button id="details-back-btn" style="margin-bottom: 10px;">Back</button>
+    `;
+    
+    document.getElementById('details-customer-data-btn').onclick = showCustomerDataPage;
+    document.getElementById('details-edit-staff-btn').onclick = showEditStaffPage;
+    document.getElementById('details-edit-vendor-btn').onclick = showEditVendorPage;
+    document.getElementById('details-back-btn').onclick = () => {
+        currentEventDetail = null;
+        currentViewEventId = null;
+        showMenu('events');
+    };
+}
 
-    const modal = document.getElementById('registrations-modal') || createRegistrationsModal();
-    const overlay = document.getElementById('modal-overlay');
-
-    modal.classList.remove('hidden');
-    overlay.classList.remove('hidden');
-
-    const list = document.getElementById('registrations-list');
-    if (!list) {
-        showMessage('Error loading registrations modal', 'error');
+async function showCustomerDataPage() {
+    if (!currentEventDetail) {
+        showMessage('No event selected', 'error');
         return;
     }
     
-    list.innerHTML = '<p>Loading...</p>';
-
     try {
-        const res = await window.api.customerGetRegistrations(currentUser.ID);
-
-        if (!res.success || !res.registrations || res.registrations.length === 0) {
-            list.innerHTML = '<p>No registrations yet</p>';
-            return;
+        const result = await window.api.registrationGetByEvent(currentEventDetail.ID);
+        const detailsMenu = document.getElementById('details-menu');
+        
+        let html = `<h2>${currentEventDetail.name} - Customer Data</h2>
+            <button id="customer-data-back-btn" style="margin-bottom: 20px;">Back</button>`;
+        
+        if (result.success && result.registrations && result.registrations.length > 0) {
+            html += `<table class="events-table"><thead><tr><th>Customer Name</th><th>Customer Email</th><th>Ticket Number</th><th>Fee Status</th><th>Action</th></tr></thead><tbody>`;
+            result.registrations.forEach(reg => {
+                const toggleStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
+                html += `<tr>
+                    <td>${reg.customerName || 'N/A'}</td>
+                    <td>${reg.customerEmail || 'N/A'}</td>
+                    <td>${reg.ticketNum}</td>
+                    <td><strong>${reg.feeStatus}</strong></td>
+                    <td>
+                        <button data-reg-id="${reg.ID}" class="toggle-fee-btn">Mark as ${toggleStatus}</button>
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No customers registered</p>';
         }
-
-        let html = `<table class="events-table"><thead><tr><th>Event ID</th><th>Event Name</th><th>Ticket#</th><th>Fee Status</th></tr></thead><tbody>`;
-        res.registrations.forEach(r => {
-            // Use eventName from the response (it's already populated by the backend)
-            const eventName = r.eventName || `Event ${r.eventID}`;
-            html += `<tr>
-                <td>${r.eventID}</td>
-                <td>${eventName}</td>
-                <td>${r.ticketNum}</td>
-                <td>${r.feeStatus}</td>
-            </tr>`;
+        
+        detailsMenu.innerHTML = html;
+        
+        // Store registrations for use in event delegation
+        const registrationsData = result.registrations;
+        
+        // Add event delegation for fee toggle
+        detailsMenu.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('toggle-fee-btn')) {
+                const regID = parseInt(e.target.dataset.regId);
+                const reg = registrationsData.find(r => r.ID === regID);
+                
+                if (!reg) {
+                    showMessage('Registration not found', 'error');
+                    return;
+                }
+                
+                const newStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
+                
+                try {
+                    const updateRes = await window.api.updateCustomerFeeStatus({
+                        registrationID: regID,
+                        feeStatus: newStatus
+                    });
+                    
+                    if (updateRes.success) {
+                        showMessage(`Fee status updated to ${newStatus}!`, 'success');
+                        await showCustomerDataPage();
+                    } else {
+                        showMessage(updateRes.message || 'Failed to update', 'error');
+                    }
+                } catch (error) {
+                    showMessage(`Error: ${error.message}`, 'error');
+                }
+            }
         });
-        html += `</tbody></table>`;
-        list.innerHTML = html;
+        
+        document.getElementById('customer-data-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
     } catch (error) {
-        list.innerHTML = `<p>Error: ${error.message}</p>`;
+        showMessage(`Error: ${error.message}`, 'error');
     }
 }
 
-// ======================= ORGANISER STAFF MANAGEMENT =======================
 async function showEditStaffPage() {
     if (!currentViewEventId) {
         showMessage('No event selected', 'error');
@@ -539,10 +656,8 @@ async function showEditStaffPage() {
         const detailsMenu = document.getElementById('details-menu');
         
         let html = `<h2>${currentEventDetail.name} - Manage Staff</h2>
-            <div class="button-group">
-                <button id="add-staff-btn">Add Staff</button>
-                <button id="staff-back-btn">Back</button>
-            </div>`;
+            <button id="add-staff-btn" style="margin-bottom: 10px;">Add Staff</button>
+            <button id="staff-back-btn" style="margin-bottom: 20px;">Back</button>`;
         
         if (result.success && result.staff && result.staff.length > 0) {
             html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Team</th><th>Position</th><th>Actions</th></tr></thead><tbody>`;
@@ -648,9 +763,74 @@ function showEditStaffForm(staff) {
     };
     
     document.getElementById('edit-staff-cancel-btn').onclick = showEditStaffPage;
-};
+}
 
-// ======================= ORGANISER VENDOR MANAGEMENT =======================
+function showAddStaffForm() {
+    const detailsMenu = document.getElementById('details-menu');
+    detailsMenu.innerHTML = `
+        <h2>${currentEventDetail.name} - Add Staff Member</h2>
+        <form id="add-staff-details-form" class="modal-form" style="max-width: 400px;">
+            <label for="staff-name-input">Staff Name</label>
+            <input id="staff-name-input" type="text" required>
+            <label for="staff-email-input">Email</label>
+            <input id="staff-email-input" type="email" required>
+            <label for="staff-team-input">Team</label>
+            <input id="staff-team-input" type="text" required>
+            <label for="staff-position-input">Position</label>
+            <input id="staff-position-input" type="text" required>
+            <div class="button-group">
+                <button type="submit" id="staff-submit-btn">Add Staff</button>
+                <button type="button" id="staff-cancel-btn">Cancel</button>
+            </div>
+        </form>
+    `;
+    
+    document.getElementById('add-staff-details-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('staff-name-input').value.trim();
+        const email = document.getElementById('staff-email-input').value.trim();
+        const team = document.getElementById('staff-team-input').value.trim();
+        const position = document.getElementById('staff-position-input').value.trim();
+        
+        if (!name || !email || !team || !position) {
+            showMessage('Please fill all fields', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.staffAdd({
+                eventID: currentViewEventId,
+                name, email, team, position
+            });
+            
+            if (result.success) {
+                showMessage('Staff added!', 'success');
+                await showEditStaffPage();
+            } else {
+                showMessage(result.message || 'Failed', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+    
+    document.getElementById('staff-cancel-btn').onclick = showEditStaffPage;
+}
+
+async function deleteStaffMember(staffID) {
+    try {
+        const result = await window.api.staffDelete(staffID);
+        if (result.success) {
+            showMessage('Staff deleted!', 'success');
+            await showEditStaffPage();
+        } else {
+            showMessage(result.message || 'Failed', 'error');
+        }
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
 async function showEditVendorPage() {
     if (!currentViewEventId) {
         showMessage('No event selected', 'error');
@@ -662,10 +842,8 @@ async function showEditVendorPage() {
         const detailsMenu = document.getElementById('details-menu');
         
         let html = `<h2>${currentEventDetail.name} - Manage Vendors</h2>
-            <div class="button-group">
-                <button id="add-vendor-btn">Add Vendor</button>
-                <button id="vendor-back-btn">Back</button>
-            </div>`;
+            <button id="add-vendor-btn" style="margin-bottom: 10px;">Add Vendor</button>
+            <button id="vendor-back-btn" style="margin-bottom: 20px;">Back</button>`;
         
         if (result.success && result.vendors && result.vendors.length > 0) {
             html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Product/Service</th><th>Charges Due</th><th>Actions</th></tr></thead><tbody>`;
@@ -773,104 +951,358 @@ function showEditVendorForm(vendor) {
     document.getElementById('edit-vendor-cancel-btn').onclick = showEditVendorPage;
 }
 
-// ======================= ORGANISER CUSTOMER FEE STATUS MANAGEMENT =======================
-async function showManageCustomerFeesPage() {
-    if (!currentEventDetail) {
-        showMessage('No event selected', 'error');
-        return;
-    }
+function showAddVendorForm() {
+    const detailsMenu = document.getElementById('details-menu');
+    detailsMenu.innerHTML = `
+        <h2>${currentEventDetail.name} - Add Vendor</h2>
+        <form id="add-vendor-details-form" class="modal-form" style="max-width: 400px;">
+            <label for="vendor-name-input">Vendor Name</label>
+            <input id="vendor-name-input" type="text" required>
+            <label for="vendor-email-input">Email</label>
+            <input id="vendor-email-input" type="email" required>
+            <label for="vendor-service-input">Product/Service</label>
+            <input id="vendor-service-input" type="text" required>
+            <label for="vendor-charges-input">Charges Due</label>
+            <input id="vendor-charges-input" type="number" step="0.01">
+            <div class="button-group">
+                <button type="submit" id="vendor-submit-btn">Add Vendor</button>
+                <button type="button" id="vendor-cancel-btn">Cancel</button>
+            </div>
+        </form>
+    `;
     
-    try {
-        const result = await window.api.registrationGetByEvent(currentEventDetail.ID);
-        const detailsMenu = document.getElementById('details-menu');
+    document.getElementById('add-vendor-details-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('vendor-name-input').value.trim();
+        const email = document.getElementById('vendor-email-input').value.trim();
+        const prod_serv = document.getElementById('vendor-service-input').value.trim();
+        const chargesDue = parseFloat(document.getElementById('vendor-charges-input').value || 0);
         
-        let html = `<h2>${currentEventDetail.name} - Manage Customer Fees</h2>
-            <div class="button-group"><button id="fees-back-btn">Back</button></div>`;
-        
-        if (result.success && result.registrations && result.registrations.length > 0) {
-            html += `<table class="events-table"><thead><tr><th>Customer ID</th><th>Ticket Number</th><th>Fee Status</th><th>Action</th></tr></thead><tbody>`;
-            result.registrations.forEach(reg => {
-                const toggleStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
-                html += `
-                    <tr>
-                        <td>${reg.custID}</td>
-                        <td>${reg.ticketNum}</td>
-                        <td><strong>${reg.feeStatus}</strong></td>
-                        <td>
-                            <button data-reg-id="${reg.ID}" class="toggle-fee-btn">Mark as ${toggleStatus}</button>
-                        </td>
-                    </tr>
-                `;
-            });
-            html += `</tbody></table>`;
-        } else {
-            html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No customers registered</p>';
+        if (!name || !email || !prod_serv) {
+            showMessage('Please fill required fields', 'error');
+            return;
         }
         
-        detailsMenu.innerHTML = html;
-        
-        // Add event delegation for fee toggle
-        detailsMenu.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('toggle-fee-btn')) {
-                const regID = parseInt(e.target.dataset.regId);
-                const reg = result.registrations.find(r => r.ID === regID);
-                const newStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
-                
-                try {
-                    const updateRes = await window.api.updateCustomerFeeStatus({
-                        registrationID: regID,
-                        feeStatus: newStatus
-                    });
-                    
-                    if (updateRes.success) {
-                        showMessage(`Fee status updated to ${newStatus}!`, 'success');
-                        await showManageCustomerFeesPage();
-                    } else {
-                        showMessage(updateRes.message || 'Failed to update', 'error');
-                    }
-                } catch (error) {
-                    showMessage(`Error: ${error.message}`, 'error');
-                }
+        try {
+            const result = await window.api.vendorAdd({
+                eventID: currentViewEventId,
+                name, email, prod_serv, chargesDue
+            });
+            
+            if (result.success) {
+                showMessage('Vendor added!', 'success');
+                await showEditVendorPage();
+            } else {
+                showMessage(result.message || 'Failed', 'error');
             }
-        });
-        
-        document.getElementById('fees-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+    
+    document.getElementById('vendor-cancel-btn').onclick = showEditVendorPage;
+}
+
+async function deleteVendor(vendorID) {
+    try {
+        const result = await window.api.vendorDelete(vendorID);
+        if (result.success) {
+            showMessage('Vendor deleted!', 'success');
+            await showEditVendorPage();
+        } else {
+            showMessage(result.message || 'Failed', 'error');
+        }
     } catch (error) {
         showMessage(`Error: ${error.message}`, 'error');
     }
 }
 
-// Update the updateEventDetailsMenu to include new buttons:
-function updateEventDetailsMenu(event) {
-    const detailsMenu = document.getElementById('details-menu');
-    
-    detailsMenu.innerHTML = `
-        <h2>${event.name} - Details</h2>
-        
-        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <p><strong>Event ID:</strong> ${event.ID}</p>
-            <p><strong>Venue:</strong> ${event.venue}</p>
-            <p><strong>Start Date:</strong> ${event.startDate}</p>
-            <p><strong>End Date:</strong> ${event.endDate}</p>
-            <p><strong>Seats:</strong> ${event.soldTickets}/${event.totalSeats}</p>
-        </div>
-        
-        <div class="button-group">
-            <button id="details-customer-data-btn">Customer Data</button>
-            <button id="details-manage-fees-btn">Manage Fees</button>
-            <button id="details-edit-staff-btn">Edit Staff</button>
-            <button id="details-edit-vendor-btn">Edit Vendors</button>
-            <button id="details-back-btn">Back</button>
+// ======================= CUSTOMER REGISTRATION =======================
+function createRegisterEventModal() {
+    const modal = document.createElement('div');
+    modal.id = 'register-event-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Register for Event</h2>
+                <button class="close" data-close="register-event-modal">×</button>
+            </div>
+            <form id="register-event-form" class="modal-form">
+                <label for="register-event-id">Event ID</label>
+                <input id="register-event-id" type="number" required>
+                <div class="modal-actions">
+                    <button type="submit">Register</button>
+                </div>
+            </form>
         </div>
     `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+async function openRegisterEvent() {
+    const modal = document.getElementById('register-event-modal');
+    const overlay = document.getElementById('modal-overlay');
     
-    document.getElementById('details-customer-data-btn').onclick = showCustomerDataPage;
-    document.getElementById('details-manage-fees-btn').onclick = showManageCustomerFeesPage;
-    document.getElementById('details-edit-staff-btn').onclick = showEditStaffPage;
-    document.getElementById('details-edit-vendor-btn').onclick = showEditVendorPage;
-    document.getElementById('details-back-btn').onclick = () => {
-        currentEventDetail = null;
-        currentViewEventId = null;
-        showMenu('events');
+    if (!currentUser || !currentUser.ID) {
+        showMessage('Please login first', 'error');
+        return;
+    }
+    
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const form = modal.querySelector('#register-event-form');
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const eventID = parseInt(document.getElementById('register-event-id').value || 0);
+        
+        if (!eventID) {
+            showMessage('Please enter Event ID', 'error');
+            return;
+        }
+
+        try {
+            const res = await window.api.customerRegister({
+                custID: currentUser.ID,
+                eventID
+            });
+            
+            if (res && res.success) {
+                showMessage(`Registered! Ticket #${res.ticketNum || ''}`, 'success');
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                document.getElementById('register-event-id').value = '';
+                await loadCustomerEventsTable();
+            } else {
+                showMessage(res?.message || 'Registration failed', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
     };
+}
+
+// View registrations
+async function openRegistrationsModal() {
+    if (!currentUser || !currentUser.ID) {
+        showMessage('Please login to view registrations', 'error');
+        return;
+    }
+
+    try {
+        const res = await window.api.customerGetRegistrations(currentUser.ID);
+
+        if (!res.success || !res.registrations || res.registrations.length === 0) {
+            showMessage('No registrations yet', 'info');
+            return;
+        }
+
+        const menu = document.getElementById('customer-event-menu');
+        let html = `<h2>My Registrations</h2>
+            <button id="registrations-back-btn" style="margin-bottom: 20px;">Back to Events</button>
+            <table class="events-table" style="margin-top: 0;">
+                <thead>
+                    <tr>
+                        <th>Event ID</th>
+                        <th>Event Name</th>
+                        <th>Ticket #</th>
+                        <th>Fee Status</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        res.registrations.forEach(r => {
+            const eventName = r.eventName || `Event ${r.eventID}`;
+            html += `<tr>
+                <td>${r.eventID}</td>
+                <td>${eventName}</td>
+                <td>${r.ticketNum}</td>
+                <td>${r.feeStatus}</td>
+            </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        
+        menu.innerHTML = html;
+        
+        // Bind the back button immediately after setting innerHTML
+        const backBtn = document.getElementById('registrations-back-btn');
+        if (backBtn) {
+            backBtn.onclick = () => {
+                showCustomerEventMenu();
+            };
+        }
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+// ======================= INITIALIZE APP =======================
+function initializeApp() {
+    // Main menu buttons
+    const orgBtn = document.getElementById('org-btn');
+    const custBtn = document.getElementById('cust-btn');
+    
+    if (orgBtn) orgBtn.onclick = () => showMenu('organiser');
+    if (custBtn) custBtn.onclick = () => showMenu('customer');
+    
+    // Organiser menu
+    const orgBackBtn = document.getElementById('org-back-btn');
+    const orgSignupBtn = document.getElementById('org-signup-btn');
+    const orgLoginBtn = document.getElementById('org-login-btn');
+    
+    if (orgBackBtn) orgBackBtn.onclick = () => showMenu('main');
+    if (orgSignupBtn) orgSignupBtn.onclick = () => openSignup('organiser');
+    if (orgLoginBtn) orgLoginBtn.onclick = () => openLogin('organiser');
+    
+    // Customer menu
+    const custBackBtn = document.getElementById('cust-back-btn');
+    const custSignupBtn = document.getElementById('cust-signup-btn');
+    const custLoginBtn = document.getElementById('cust-login-btn');
+    
+    if (custBackBtn) custBackBtn.onclick = () => showMenu('main');
+    if (custSignupBtn) custSignupBtn.onclick = () => openSignup('customer');
+    if (custLoginBtn) custLoginBtn.onclick = () => openLogin('customer');
+    
+    // Event menu
+    const addEventBtn = document.getElementById('add-event-btn');
+    const modifyEventBtn = document.getElementById('modify-event-btn');
+    const deleteEventBtn = document.getElementById('delete-event-btn');
+    const eventDetailsBtn = document.getElementById('event-details-btn');
+    const eventBackBtn = document.getElementById('event-back-btn');
+    
+    if (addEventBtn) addEventBtn.onclick = openAddEvent;
+    if (modifyEventBtn) modifyEventBtn.onclick = openModifyRequest;
+    if (deleteEventBtn) deleteEventBtn.onclick = openDeleteEvent;
+    if (eventDetailsBtn) eventDetailsBtn.onclick = openEventDetails;
+    if (eventBackBtn) eventBackBtn.onclick = () => {
+        currentUser = null;
+        currentViewEventId = null;
+        showMenu('main');
+    };
+    
+    // Overlay click to close modals
+    const overlay = document.getElementById('modal-overlay');
+    if (overlay) {
+        overlay.onclick = () => {
+            overlay.classList.add('hidden');
+            document.querySelectorAll('.modal:not(.hidden)').forEach(m => m.classList.add('hidden'));
+        };
+    }
+    
+    // Close button handlers
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('close')) {
+            const modalId = e.target.getAttribute('data-close');
+            const modal = document.getElementById(modalId);
+            const overlay = document.getElementById('modal-overlay');
+            
+            if (modal) modal.classList.add('hidden');
+            if (overlay && !document.querySelectorAll('.modal:not(.hidden)').length) {
+                overlay.classList.add('hidden');
+            }
+        }
+    });
+}
+
+// Helper function to show/hide menus
+function showMenu(menuName) {
+    // Hide all menus first
+    Object.values(menus).forEach(menu => {
+        if (menu) menu.classList.add('hidden');
+    });
+    
+    // Show the requested menu
+    if (menus[menuName]) {
+        menus[menuName].classList.remove('hidden');
+    }
+}
+
+// Initialize the app when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeApp);
+
+// Add these functions after the openLogin function:
+
+async function loadOrganizerEvents() {
+    try {
+        const result = await window.api.eventGetAll();
+        
+        if (result.success && result.events) {
+            const filteredEvents = result.events.filter(e => e.orgID === currentUser.ID);
+            
+            const tbody = document.querySelector('#events-table tbody');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            if (filteredEvents.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">No events yet</td></tr>';
+            } else {
+                filteredEvents.forEach(ev => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${ev.ID}</td>
+                        <td>${ev.name}</td>
+                        <td>${ev.venue}</td>
+                        <td>${ev.startDate}</td>
+                        <td>${ev.endDate}</td>
+                        <td>${ev.totalSeats}</td>
+                        <td>${ev.soldTickets || 0}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+        
+        showMenu('events');
+    } catch (error) {
+        showMessage(`Error loading events: ${error.message}`, 'error');
+    }
+}
+
+function showCustomerEventMenu() {
+    const customerMenu = document.getElementById('customer-event-menu');
+    
+    // Recreate the entire menu HTML
+    customerMenu.innerHTML = `
+        <h2>Customer - Events</h2>
+        <button id="register-event-btn" style="margin-bottom: 10px;">Register for Event</button>
+        <button id="view-registrations-btn" style="margin-bottom: 10px;">View My Registrations</button>
+        <button id="customer-events-back-btn" style="margin-bottom: 20px;">Back</button>
+        <table id="customer-events-table" class="events-table">
+            <thead>
+                <tr>
+                    <th>Event ID</th>
+                    <th>Event Name</th>
+                    <th>Venue</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Total Seats</th>
+                    <th>Sold Tickets</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="7">Loading...</td></tr>
+            </tbody>
+        </table>
+    `;
+    
+    // Now bind the event listeners to the newly created buttons
+    const registerBtn = document.getElementById('register-event-btn');
+    const viewRegsBtn = document.getElementById('view-registrations-btn');
+    const backBtn = document.getElementById('customer-events-back-btn');
+    
+    if (registerBtn) registerBtn.onclick = openRegisterEvent;
+    if (viewRegsBtn) viewRegsBtn.onclick = openRegistrationsModal;
+    if (backBtn) {
+        backBtn.onclick = () => {
+            currentUser = null;
+            showMenu('main');
+        };
+    }
+    
+    loadCustomerEventsTable();
+    showMenu('customerEvents');
 }

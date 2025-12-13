@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
-window.api = {
+const api = {
     // Organiser
     organiserSignup: (data) => ipcRenderer.invoke('organiser:signup', data),
     organiserLogin: (username, password) => ipcRenderer.invoke('organiser:login', username, password),
@@ -34,4 +34,4 @@ window.api = {
     updateCustomerFeeStatus: (data) => ipcRenderer.invoke('registration:updateFeeStatus', data)
 };
 
-contextBridge.exposeInMainWorld('api', window.api);
+contextBridge.exposeInMainWorld('api', api);
