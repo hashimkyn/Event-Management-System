@@ -24,52 +24,71 @@
 
 <!-- CUSTOMER MENU -->
 <div id="customer-menu" class="menu hidden">
-    <h1>Customer Menu</h1>
-    <button id="cust-signup-btn">Signup</button>
-    <button id="cust-login-btn">Login</button>
-    <button id="cust-back-btn">Back</button>
+    <h2>Customer Menu</h2>
+    <div class="button-group">
+        <button id="cust-signup-btn">Sign Up</button>
+        <button id="cust-login-btn">Login</button>
+        <button id="cust-back-btn">Back</button>
+    </div>
+</div>
+
+<!-- CUSTOMER EVENT MENU -->
+<div id="customer-event-menu" class="menu hidden">
+    <h2>Events</h2>
+    <div class="button-group">
+        <button id="register-event-btn">Register for Event</button>
+        <button id="view-registrations-btn">View My Registrations</button>
+        <button id="customer-back-btn">Back</button>
+    </div>
+    
+    <h3>Available Events</h3>
+    <table id="customer-events-table" class="events-table">
+        <thead>
+            <tr>
+                <th>Event Name</th>
+                <th>Venue</th>
+                <th>Event ID</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Total Seats</th>
+                <th>Sold Tickets</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
 <!-- EVENT MENU -->
 <div id="event-menu" class="menu hidden">
-    <h1>Events Menu</h1>
-    <button id="add-event-btn">Add Event</button>
-    <button id="modify-event-btn">Modify Event</button>
-    <button id="delete-event-btn">Delete Event</button>
-    <button id="view-details-btn">Event Details</button>
-    <button id="event-back-btn">Back</button>
-
-        <!-- Events table -->
-        <div class="events-table-wrap">
-            <table id="events-table" class="events-table">
-                <thead>
-                    <tr>
-                        <th>Event Name</th>
-                        <th>Venue</th>
-                        <th>Event ID</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Total Seats</th>
-                        <th>Tickets Sold</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- rows will be added dynamically or left empty -->
-                </tbody>
-            </table>
-        </div>
+    <h2>Events Management</h2>
+    <div class="button-group">
+        <button id="add-event-btn">Add Event</button>
+        <button id="modify-event-btn">Modify Event</button>
+        <button id="delete-event-btn">Delete Event</button>
+        <button id="event-details-btn">View Details</button>
+        <button id="event-back-btn">Back</button>
+    </div>
+    
+    <h3>Your Events</h3>
+    <table id="events-table" class="events-table">
+        <thead>
+            <tr>
+                <th>Event ID</th>
+                <th>Event Name</th>
+                <th>Venue</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Total Seats</th>
+                <th>Sold Tickets</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
-<!-- DETAILS MENU -->
+
 <div id="details-menu" class="menu hidden">
-    <h1>Event Details</h1>
-    <div style="display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:12px;">
-        <div><strong>Selected Event:</strong> <span id="view-details-event-name">(none)</span> <small id="view-details-event-id-span"></small></div>
-    </div>
-    <button id="details-customers-btn">Customers</button>
-    <button id="details-staff-menu-btn">Staff Menu</button>
-    <button id="details-vendors-menu-btn">Vendors Menu</button>
-    <button id="details-back-btn">Back</button>
+    <!-- Content will be dynamically generated -->
 </div>
 
 <!-- STAFF MENU -->
@@ -136,33 +155,6 @@
             </div>
         </form>
     </div>
-</div>
-
-<!-- CUSTOMER EVENT REGISTRATION MENU -->
-<div id="customer-event-menu" class="menu hidden">
-    <h1>Customer Event Registration</h1>
-    <button id="register-event-btn">Register for Event</button>
-    <button id="view-registrations-btn">View My Registrations</button>
-    <button id="customer-back-btn">Back</button>
-    
-        <!-- Customer events table (hidden until customer logs in) -->
-        <div id="customer-events-table-wrap" class="events-table-wrap hidden">
-            <table id="customer-events-table" class="events-table">
-                <thead>
-                    <tr>
-                        <th>Event Name</th>
-                        <th>Venue</th>
-                        <th>Event ID</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Total Seats</th>
-                        <th>Tickets Sold</th>
-                    </tr>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
-        </div>
 </div>
 
 <!-- LOGIN & SIGNUP MODALS -->
@@ -395,24 +387,34 @@
             <button class="close" data-close="add-event-modal">×</button>
         </div>
         <form id="add-event-form" class="modal-form">
-            <label for="add-event-name">Event Name</label>
-            <input id="add-event-name" name="name" type="text" required>
+            <label for="event-name">Event Name</label>
+            <input id="event-name" name="name" type="text" required>
 
-            <label for="add-event-start">Start Date</label>
-            <input id="add-event-start" name="start" type="date" required>
+            <label for="event-venue">Venue</label>
+            <input id="event-venue" name="venue" type="text" required>
 
-            <label for="add-event-end">End Date</label>
-            <input id="add-event-end" name="end" type="date" required>
+            <label for="event-start">Start Date</label>
+            <input id="event-start" name="startDate" type="date" required>
 
-            <label for="add-event-venue">Venue</label>
-            <input id="add-event-venue" name="venue" type="text" required>
+            <label for="event-end">End Date</label>
+            <input id="event-end" name="endDate" type="date" required>
 
-            <label for="add-event-seats">Total Seats</label>
-            <input id="add-event-seats" name="totalSeats" type="number" min="0" required>
+            <label for="event-seats">Total Seats</label>
+            <input id="event-seats" name="totalSeats" type="number" required>
+
+            <label for="event-type">Event Type</label>
+            <select id="event-type" name="type" required>
+                <option value="1">MUN</option>
+                <option value="2">OLYMPIAD</option>
+                <option value="3">SEMINAR</option>
+                <option value="4">CEREMONY</option>
+                <option value="5">FESTIVAL</option>
+                <option value="6">CONCERT</option>
+                <option value="7">CUSTOM</option>
+            </select>
 
             <div class="modal-actions">
                 <button type="submit">Add Event</button>
-                <button type="button" id="add-event-cancel" data-close="add-event-modal" class="btn-secondary">Cancel</button>
             </div>
         </form>
     </div>

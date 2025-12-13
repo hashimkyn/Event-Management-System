@@ -150,16 +150,277 @@ button:hover {
 
 /* Events table styling (shared) */
 .events-table-wrap { margin-top: 18px; overflow-x:auto; }
-.events-table { width: 100%; border-collapse: collapse; margin: 12px auto 0; }
-.events-table th, .events-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-.events-table thead th { background: #f0f0f0; font-weight: 600; }
-.events-table tbody tr:nth-child(even) { background: #fafafa; }
-.events-table tbody tr:hover { background: #f5faff; }
+.events-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+    border: 1px solid #ddd;
+}
+.events-table thead {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+}
+.events-table th,
+.events-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+.events-table tbody tr:hover {
+    background-color: #f9f9f9;
+}
+.events-table button {
+    padding: 6px 12px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.events-table button:hover {
+    background-color: #da190b;
+}
+
+#event-menu {
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+#events-table {
+    font-size: 14px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.button-group button {
+    padding: 10px 20px;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.button-group button:hover {
+    background-color: #0b7dda;
+}
+
+.button-group button:last-child {
+    background-color: #757575;
+}
+
+.button-group button:last-child:hover {
+    background-color: #616161;
+}
 
 /* Toast / non-blocking messages */
 #toast-container { position: fixed; right: 18px; top: 18px; z-index: 20000; display: flex; flex-direction: column; align-items: flex-end; }
-.toast { margin-top: 8px; padding: 10px 14px; border-radius: 6px; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.12); font-size: 13px; }
-.toast-success { background: #28a745; }
-.toast-error { background: #dc3545; }
-.toast-info { background: #007bff; }
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    animation: slideIn 0.3s ease-in;
+    z-index: 10000;  /* VERY HIGH - above modals */
+}
+.toast-success { background-color: #4caf50; color: white; }
+.toast-error { background-color: #f44336; color: white; }
+.toast-info { background-color: #2196f3; color: white; }
 .toast-warning { background: #ffc107; color: #212529; }
+
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;  /* Below toasts but above everything else */
+    display: none;
+}
+
+#modal-overlay:not(.hidden) {
+    display: block;
+}
+
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;  /* Above overlay */
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    padding: 30px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.modal-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal-form label {
+    font-weight: 500;
+    color: #333;
+}
+
+.modal-form input,
+.modal-form select {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.modal-form input:focus,
+.modal-form select:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.modal-actions button[type="submit"] {
+    background-color: #2196f3;
+    color: white;
+}
+
+.modal-actions button[type="submit"]:hover {
+    background-color: #0b7dda;
+}
+
+.modal-actions button[type="button"] {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.modal-actions button[type="button"]:hover {
+    background-color: #e0e0e0;
+}
+
+/* Add these styles for the details menu */
+
+#details-menu {
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+#details-menu h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+#details-menu .button-group {
+    margin-bottom: 20px;
+}
+
+#details-menu form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#details-menu form label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+#details-menu form input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+#details-menu form input:focus {
+    outline: none;
+    border-color: #2196f3;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.3);
+}
+
+#details-menu .events-table {
+    margin-top: 20px;
+}

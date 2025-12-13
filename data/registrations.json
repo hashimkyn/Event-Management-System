@@ -1,0 +1,18 @@
+[
+  {
+    "ID": 1,
+    "custID": 999,
+    "eventID": 948,
+    "ticketNum": 33253,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-13T16:39:04.051Z"
+  },
+  {
+    "ID": 2,
+    "custID": 1,
+    "eventID": 948,
+    "ticketNum": 86887,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-13T16:48:34.273Z"
+  }
+]

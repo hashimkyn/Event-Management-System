@@ -1,3 +1,7 @@
+window.addEventListener('error', (e) => {
+    console.error('Error:', e.error);
+});
+
 // MENUS OBJECT
 const menus = {
     main: document.getElementById('main-menu'),
@@ -5,815 +9,868 @@ const menus = {
     customer: document.getElementById('customer-menu'),
     events: document.getElementById('event-menu'),
     details: document.getElementById('details-menu'),
-    staff: document.getElementById('staff-menu'),
-    vendors: document.getElementById('vendors-menu'),
     customerEvents: document.getElementById('customer-event-menu')
 };
 
-// Simple toast/message helper (non-blocking)
-function showMessage(text, type = 'info', timeout = 3500) {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.setAttribute('aria-live', 'polite');
-        container.style.position = 'fixed';
-        container.style.right = '18px';
-        container.style.top = '18px';
-        container.style.zIndex = 20000;
-        document.body.appendChild(container);
-    }
-    const el = document.createElement('div');
-    el.className = `toast toast-${type}`;
-    el.textContent = text;
-    el.style.marginTop = '8px';
-    el.style.padding = '10px 14px';
-    el.style.borderRadius = '6px';
-    el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
-    el.style.color = '#fff';
-    el.style.fontSize = '13px';
-    if (type === 'success') el.style.background = '#28a745';
-    else if (type === 'error') el.style.background = '#dc3545';
-    else if (type === 'warning') el.style.background = '#ffc107'; el.style.color = type === 'warning' ? '#212529' : '#fff';
-    container.appendChild(el);
-    setTimeout(() => {
-        el.style.transition = 'opacity 300ms ease, transform 300ms ease';
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(-6px)';
-        setTimeout(() => { try { container.removeChild(el); } catch (e) {} }, 320);
-    }, timeout);
-}
-
-// Helper to show a menu
-function showMenu(menuId) {
-    Object.values(menus).forEach(menu => menu.classList.add('hidden'));
-    menus[menuId].classList.remove('hidden');
-}
-
-// MAIN MENU
-document.getElementById('org-btn').onclick = () => showMenu('organiser');
-document.getElementById('cust-btn').onclick = () => showMenu('customer');
-
-// ORGANISER MENU
-document.getElementById('org-back-btn').onclick = () => showMenu('main');
-document.getElementById('org-signup-btn').onclick = () => openSignup('organiser');
-document.getElementById('org-login-btn').onclick = () => openLogin('organiser');
-
-// CUSTOMER MENU
-document.getElementById('cust-back-btn').onclick = () => showMenu('main');
-document.getElementById('cust-signup-btn').onclick = () => openSignup('customer');
-document.getElementById('cust-login-btn').onclick = () => openLogin('customer');
-
-// EVENT MENU
-document.getElementById('event-back-btn').onclick = () => showMenu('main');
-document.getElementById('add-event-btn').onclick = () => openAddEvent();
-document.getElementById('modify-event-btn').onclick = () => openModifyRequest();
-document.getElementById('delete-event-btn').onclick = () => openDeleteEvent();
-document.getElementById('view-details-btn').onclick = () => openViewDetailsRequest();
-
-// CUSTOMER EVENT REGISTRATION MENU
-document.getElementById('customer-back-btn').onclick = () => showMenu('customer');
-document.getElementById('register-event-btn').onclick = () => openRegisterEvent();
-// open the registrations modal
-document.getElementById('view-registrations-btn').onclick = () => openRegistrationsModal();
-
-// DETAILS MENU
-document.getElementById('details-back-btn').onclick = () => showMenu('events');
-document.getElementById('details-customers-btn').onclick = () => { if (!currentViewEventId) { showMessage('Please select an Event ID first.', 'warning'); return; } renderCustomersForCurrentEvent(); openModal(eventCustomersModal); };
-document.getElementById('details-staff-menu-btn').onclick = () => { renderStaffTable(); showMenu('staff'); };
-document.getElementById('details-vendors-menu-btn').onclick = () => { renderVendorsTable(); showMenu('vendors'); };
-
-// STAFF MENU
-document.getElementById('staff-back-btn').onclick = () => showMenu('details');
-document.getElementById('add-staff-btn').onclick = () => openAddStaff();
-document.getElementById('modify-staff-btn').onclick = () => openModifyStaffRequest();
-document.getElementById('delete-staff-btn').onclick = () => openDeleteStaff();
-
-// VENDORS MENU
-document.getElementById('vendors-back-btn').onclick = () => showMenu('details');
-document.getElementById('add-vendor-btn').onclick = () => openAddVendor();
-document.getElementById('modify-vendor-btn').onclick = () => openModifyVendorRequest();
-document.getElementById('delete-vendor-btn').onclick = () => openDeleteVendor();
-
-/* Modal helpers and handlers */
-const overlay = document.getElementById('modal-overlay');
-const loginModal = document.getElementById('login-modal');
-const signupModal = document.getElementById('signup-modal');
-const addEventModal = document.getElementById('add-event-modal');
-const deleteEventModal = document.getElementById('delete-event-modal');
-const modifyRequestModal = document.getElementById('modify-request-modal');
-const editEventModal = document.getElementById('edit-event-modal');
-const registrationsModal = document.getElementById('registrations-modal');
-const registerEventModal = document.getElementById('register-event-modal');
-const viewDetailsRequestModal = document.getElementById('view-details-request-modal');
-
-// Staff modals
-const addStaffModal = document.getElementById('add-staff-modal');
-const modifyStaffRequestModal = document.getElementById('modify-staff-request-modal');
-const editStaffModal = document.getElementById('edit-staff-modal');
-const deleteStaffModal = document.getElementById('delete-staff-modal');
-
-// Vendor modals
-const addVendorModal = document.getElementById('add-vendor-modal');
-const modifyVendorRequestModal = document.getElementById('modify-vendor-request-modal');
-const editVendorModal = document.getElementById('edit-vendor-modal');
-const deleteVendorModal = document.getElementById('delete-vendor-modal');
-
+// Global state
+let currentUser = null;
 let currentViewEventId = null;
+let currentEventDetail = null;
 
-// modal refs for lists (no longer used - replaced with menus)
-const eventCustomersModal = document.getElementById('event-customers-modal');
-const eventStaffModal = null;      // removed - now using staff menu
-const eventVendorsModal = null;    // removed - now using vendors menu
-
-// simple sample staff/vendors data (can be replaced by real data later)
-const sampleStaff = [
-    { staffId: 'S001', name: 'John Smith', role: 'Coordinator', eventId: 'E1001' },
-    { staffId: 'S002', name: 'Alice Brown', role: 'Security', eventId: 'E1001' },
-    { staffId: 'S003', name: 'Mike Davis', role: 'Setup Manager', eventId: 'E1002' }
-];
-const sampleVendors = [
-    { vendorId: 'V001', name: 'Catering Co', service: 'Catering', eventId: 'E1001' },
-    { vendorId: 'V002', name: 'AV Works', service: 'Audio/Visual', eventId: 'E1001' },
-    { vendorId: 'V003', name: 'Floral Designs', service: 'Decorations', eventId: 'E1002' }
-];
-
-// Add this sample customer data near the top with other sample data
-const sampleCustomers = [
-    { customerId: 'CUST-001', name: 'John Doe', email: 'john@example.com' },
-    { customerId: 'CUST-002', name: 'Jane Smith', email: 'jane@example.com' },
-    { customerId: 'CUST-003', name: 'Bob Wilson', email: 'bob@example.com' }
-];
-
-function openViewDetailsRequest() {
-    if (!viewDetailsRequestModal) {
-        showMessage('Details request dialog is not available.', 'error');
-        return;
-    }
-    openModal(viewDetailsRequestModal);
+// Message helper
+function showMessage(text, type = 'info', timeout = 3500) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), timeout);
 }
 
-
-function openModal(modalEl) {
-    overlay.classList.remove('hidden');
-    overlay.classList.add('show');
-    modalEl.classList.remove('hidden');
-    modalEl.classList.add('show');
-    // prevent background scroll while modal open
-    try { document.body.style.overflow = 'hidden'; } catch (e) {}
-    // focus first input for accessibility
-    const first = modalEl.querySelector('input, button, [tabindex]');
-    if (first && typeof first.focus === 'function') first.focus();
-}
-
-function closeModal(modalEl) {
-    overlay.classList.remove('show');
-    overlay.classList.add('hidden');
-    modalEl.classList.remove('show');
-    modalEl.classList.add('hidden');
-    try { document.body.style.overflow = ''; } catch (e) {}
-}
-
-function openLogin(role) {
-    clearForm('login-form');
-    loginModal.dataset.role = role; // 'organiser' or 'customer'
-    openModal(loginModal);
-}
-
-function openSignup(role) {
-    clearForm('signup-form');
-    signupModal.dataset.role = role;
-    openModal(signupModal);
-}
-
-function openAddEvent() {
-    clearForm('add-event-form');
-    openModal(addEventModal);
-}
-
-function openDeleteEvent() {
-    clearForm('delete-event-form');
-    openModal(deleteEventModal);
-}
-
-function openModifyRequest() {
-    clearForm('modify-request-form');
-    openModal(modifyRequestModal);
-}
-
-function openEditEvent() {
-    openModal(editEventModal);
-}
-
-function openRegistrationsModal() {
-    renderRegistrationsInto('registrations-table');
-    if (!registrationsModal) {
-        console.error('Registrations modal element not found');
-        showMessage('Registrations are currently unavailable. Please reload the application.', 'error');
-        return;
-    }
-    openModal(registrationsModal);
-}
-
-function openRegisterEvent() {
-    clearForm('register-event-form');
-    if (!registerEventModal) {
-        console.error('Register modal element not found');
-        showMessage('Registration dialog is not available. Please reload the application.', 'error');
-        return;
-    }
-    openModal(registerEventModal);
-}
-
-// Register Event form handling
-const registerEventForm = document.getElementById('register-event-form');
-if (registerEventForm) {
-    registerEventForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('register-event-id').value.trim();
-        if (!id) { showMessage('Please enter an Event ID to continue.', 'error'); return; }
-        const ev = sampleEvents.find(ev => ev.id === id);
-        if (!ev) { showMessage('Event not found. Verify the Event ID and try again.', 'error'); return; }
-        if (typeof ev.totalSeats === 'number' && typeof ev.ticketsSold === 'number' && ev.ticketsSold >= ev.totalSeats) {
-            showMessage('Registration failed: the event is fully booked.', 'error');
-            return;
-        }
-        // prevent duplicate registration for the same event (single registration per session)
-        const already = sampleRegistrations.find(r => r.eventId === id);
-        if (already) { showMessage('You are already registered for this event.', 'info'); return; }
-        // increment tickets sold
-        ev.ticketsSold = (ev.ticketsSold || 0) + 1;
-        // add registration record (default unpaid)
-        sampleRegistrations.push({ eventId: id, paid: false });
-        // re-render tables
-        renderEventsInto('events-table');
-        const cwrap = document.getElementById('customer-events-table-wrap');
-        if (cwrap && !cwrap.classList.contains('hidden')) {
-            renderEventsInto('customer-events-table');
-        }
-        closeModal(registerEventModal);
-        showMessage('Registration completed successfully.', 'success');
+// Show menu helper
+function showMenu(menuId) {
+    Object.values(menus).forEach(menu => {
+        if (menu) menu.classList.add('hidden');
     });
+    if (menus[menuId]) menus[menuId].classList.remove('hidden');
 }
 
-// View Details request form handling
-const viewDetailsRequestForm = document.getElementById('view-details-request-form');
-if (viewDetailsRequestForm) {
-    viewDetailsRequestForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('view-details-event-id').value.trim();
-        if (!id) { showMessage('Please enter an Event ID to continue.', 'error'); return; }
-        const ev = sampleEvents.find(ev => ev.id === id);
-        if (!ev) { showMessage('Event not found. Verify the Event ID and try again.', 'error'); return; }
-        // set current ID and open details
-        currentViewEventId = id;
-        const nameEl = document.getElementById('view-details-event-name');
-        const idSpan = document.getElementById('view-details-event-id-span');
-        if (nameEl) nameEl.textContent = ev.name || '(deleted event)';
-        if (idSpan) idSpan.textContent = `(${id})`;
-        closeModal(viewDetailsRequestModal);
-        showMenu('details');
-    });
-}
-
-// Render lists filtered by currentViewEventId
-function renderCustomersForCurrentEvent() {
-    const table = document.getElementById('event-customers-table');
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    const filtered = sampleRegistrations.filter(r => r.eventId === currentViewEventId);
-    filtered.forEach((reg, idx) => {
-        const customer = sampleCustomers[idx % sampleCustomers.length]; // Get customer data
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${customer.customerId}</td>
-            <td>${customer.name}</td>
-            <td>${customer.email}</td>
-            <td>TICKET-${String(idx + 1).padStart(4, '0')}</td>
-            <td>${reg.paid ? 'Paid' : 'Unpaid'}</td>
-            <td><button class="btn-secondary" onclick="togglePaidForCurrent('${reg.eventId}', ${idx})">Toggle Paid</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function togglePaidForCurrent(eventId, idx) {
-    const regs = sampleRegistrations.filter(r => r.eventId === eventId);
-    if (regs[idx]) {
-        regs[idx].paid = !regs[idx].paid;
-        renderCustomersForCurrentEvent();
-    }
-}
-
-function renderStaffForCurrentEvent() {
-    const table = document.getElementById('event-staff-table');
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    const filtered = sampleStaff.filter(s => s.eventId === currentViewEventId);
-    filtered.forEach((s, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${s.staffId}</td>
-            <td>${s.name}</td>
-            <td>${s.role}</td>
-            <td>${s.eventId}</td>
-            <td><button class="btn-secondary" onclick="openStaffDetail('${s.staffId}')">View</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function renderVendorsForCurrentEvent() {
-    const table = document.getElementById('event-vendors-table');
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    const filtered = sampleVendors.filter(v => v.eventId === currentViewEventId);
-    filtered.forEach((v, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${v.vendorId}</td>
-            <td>${v.name}</td>
-            <td>${v.service}</td>
-            <td>${v.eventId}</td>
-            <td><button class="btn-secondary" onclick="openVendorDetail('${v.vendorId}')">View</button></td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// small helpers for opening detail modals (by id)
-function openStaffDetail(staffId) {
-    const s = sampleStaff.find(x => x.staffId === staffId);
-    if (!s) return;
-    showMessage(`Staff: ${s.name} — ${s.role}`, 'info');
-}
-
-function openVendorDetail(vendorId) {
-    const v = sampleVendors.find(x => x.vendorId === vendorId);
-    if (!v) return;
-    showMessage(`Vendor: ${v.name} — ${v.service}`, 'info');
-}
-
-// Close elements (any element with data-close attribute)
-document.querySelectorAll('[data-close]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const target = e.currentTarget.getAttribute('data-close');
-        const modal = document.getElementById(target);
-        if (modal) closeModal(modal);
-    });
-});
-
-// Close modal on Escape key
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        [loginModal, signupModal, addEventModal, deleteEventModal, modifyRequestModal, editEventModal, registrationsModal, registerEventModal, eventCustomersModal, eventStaffModal, eventVendorsModal].forEach(m => { if (m && !m.classList.contains('hidden')) closeModal(m); });
-    }
-});
-
-// Overlay click closes any open modal
-overlay.addEventListener('click', () => {
-    [loginModal, signupModal, addEventModal, deleteEventModal, modifyRequestModal, editEventModal, registrationsModal, registerEventModal, eventCustomersModal, eventStaffModal, eventVendorsModal].forEach(m => { if (m && !m.classList.contains('hidden')) closeModal(m); });
-});
-
-// Switch links between login and signup inside modals
-document.getElementById('login-to-signup').addEventListener('click', () => {
-    const role = loginModal.dataset.role || 'customer';
-    closeModal(loginModal);
-    openSignup(role);
-});
-document.getElementById('signup-to-login').addEventListener('click', () => {
-    const role = signupModal.dataset.role || 'customer';
-    closeModal(signupModal);
-    openLogin(role);
-});
-
-// Login form submission
-document.getElementById('login-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const role = loginModal.dataset.role || 'customer';
-    // Basic validation already enforced by 'required' attributes
-    closeModal(loginModal);
-    if (role === 'organiser') {
-        showMenu('events');
-    } else {
-        // populate and reveal the customer events table only after customer login
-        renderEventsInto('customer-events-table');
-        const wrap = document.getElementById('customer-events-table-wrap');
-        if (wrap) wrap.classList.remove('hidden');
-        showMenu('customerEvents');
-    }
-});
-
-// Signup form submission (simple client-side simulation)
-document.getElementById('signup-form').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const pwd = document.getElementById('signup-password').value;
-    const pwd2 = document.getElementById('signup-password-confirm').value;
-    if (pwd !== pwd2) {
-        showMessage('Passwords do not match. Please re-enter your password.', 'error');
-        return;
-    }
-    const role = signupModal.dataset.role || 'customer';
-    // Simulate successful signup then open appropriate area or go to login
-    closeModal(signupModal);
-    // After signup, automatically open login so user can login
-    openLogin(role);
-});
-
-// Add Event form submission
-const addEventForm = document.getElementById('add-event-form');
-if (addEventForm) {
-    addEventForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const name = document.getElementById('add-event-name').value.trim();
-        const start = document.getElementById('add-event-start').value;
-        const end = document.getElementById('add-event-end').value;
-        const seats = parseInt(document.getElementById('add-event-seats').value, 10);
-        if (!name || !start || !end || Number.isNaN(seats)) {
-            showMessage('Please complete all required fields correctly.', 'error');
-            return;
-        }
-            const venue = document.getElementById('add-event-venue').value.trim();
-            if (!venue) { showMessage('Please provide a venue for the event.', 'error'); return; }
-        // auto-generate a unique event ID
-        const id = 'E' + Date.now();
-            const newEv = { name, venue, id, startDate: start, endDate: end, totalSeats: seats, ticketsSold: 0 };
-        sampleEvents.push(newEv);
-        // re-render organiser table
-        renderEventsInto('events-table');
-        // if customer table visible, re-render it too
-        const cwrap = document.getElementById('customer-events-table-wrap');
-        if (cwrap && !cwrap.classList.contains('hidden')) {
-            renderEventsInto('customer-events-table');
-        }
-        closeModal(addEventModal);
-    });
-}
-
-// Delete Event form submission
-const deleteEventForm = document.getElementById('delete-event-form');
-if (deleteEventForm) {
-    deleteEventForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('delete-event-id').value.trim();
-        if (!id) { showMessage('Please enter an Event ID to delete.', 'error'); return; }
-        const idx = sampleEvents.findIndex(ev => ev.id === id);
-        if (idx === -1) {
-            showMessage('Event ID not found. Please verify and try again.', 'error');
-            return;
-        }
-        // remove the event
-        sampleEvents.splice(idx, 1);
-        // re-render organiser table
-        renderEventsInto('events-table');
-        // if customer table visible, re-render it too
-        const cwrap = document.getElementById('customer-events-table-wrap');
-        if (cwrap && !cwrap.classList.contains('hidden')) {
-            renderEventsInto('customer-events-table');
-        }
-        closeModal(deleteEventModal);
-    });
-}
-
-// Modify Request form: load event by ID and open edit modal
-const modifyRequestForm = document.getElementById('modify-request-form');
-if (modifyRequestForm) {
-    modifyRequestForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('modify-event-id').value.trim();
-        if (!id) { showMessage('Please enter an Event ID to modify.', 'error'); return; }
-        const ev = sampleEvents.find(ev => ev.id === id);
-        if (!ev) { showMessage('Event not found. Verify the Event ID and try again.', 'error'); return; }
-        // populate edit form
-        document.getElementById('edit-event-id').value = ev.id;
-        document.getElementById('edit-event-name').value = ev.name;
-        document.getElementById('edit-event-start').value = ev.startDate;
-        document.getElementById('edit-event-end').value = ev.endDate;
-        document.getElementById('edit-event-seats').value = ev.totalSeats;
-        document.getElementById('edit-event-venue').value = ev.venue || '';
-        closeModal(modifyRequestModal);
-        openEditEvent();
-    });
-}
-
-// Edit Event form submission: save changes back to sampleEvents
-const editEventForm = document.getElementById('edit-event-form');
-if (editEventForm) {
-    editEventForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = document.getElementById('edit-event-id').value.trim();
-        const name = document.getElementById('edit-event-name').value.trim();
-        const start = document.getElementById('edit-event-start').value;
-        const end = document.getElementById('edit-event-end').value;
-        const seats = parseInt(document.getElementById('edit-event-seats').value, 10);
-        const venue = document.getElementById('edit-event-venue').value.trim();
-        if (!id || !name || !start || !end || Number.isNaN(seats) || !venue) {
-            showMessage('Please complete all fields correctly before saving.', 'error');
-            return;
-        }
-        const idx = sampleEvents.findIndex(ev => ev.id === id);
-        if (idx === -1) { showMessage('Event not found. Please verify the Event ID.', 'error'); return; }
-        // update fields (keep ticketsSold as-is)
-        sampleEvents[idx].name = name;
-        sampleEvents[idx].venue = venue;
-        sampleEvents[idx].startDate = start;
-        sampleEvents[idx].endDate = end;
-        sampleEvents[idx].totalSeats = seats;
-        // re-render tables
-        renderEventsInto('events-table');
-        const cwrap = document.getElementById('customer-events-table-wrap');
-        if (cwrap && !cwrap.classList.contains('hidden')) {
-            renderEventsInto('customer-events-table');
-        }
-        closeModal(editEventModal);
-    });
-}
-
-// --- Events data and rendering ---
-const sampleEvents = [
-    { name: 'Summer Fest', venue: 'Central Park', id: 'E1001', startDate: '2025-06-01', endDate: '2025-06-03', totalSeats: 500, ticketsSold: 120 },
-    { name: 'Tech Conference', venue: 'Convention Center', id: 'E1002', startDate: '2025-09-10', endDate: '2025-09-12', totalSeats: 300, ticketsSold: 250 },
-    { name: 'Charity Gala', venue: 'Grand Ballroom', id: 'E1003', startDate: '2025-12-05', endDate: '2025-12-05', totalSeats: 200, ticketsSold: 180 }
-];
-
-// in-memory registrations (eventId, paid)
-const sampleRegistrations = [];
-
-function renderRegistrationsInto(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    sampleRegistrations.forEach(reg => {
-        const ev = sampleEvents.find(e => e.id === reg.eventId) || {};
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${ev.name || '(deleted event)'}</td>
-            <td>${ev.venue || ''}</td>
-            <td>${reg.eventId}</td>
-            <td>${reg.paid ? 'Paid' : 'Unpaid'}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function renderEventsInto(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    sampleEvents.forEach(ev => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${ev.name}</td>
-            <td>${ev.venue || ''}</td>
-            <td>${ev.id}</td>
-            <td>${ev.startDate}</td>
-            <td>${ev.endDate}</td>
-            <td>${ev.totalSeats}</td>
-            <td>${ev.ticketsSold}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// Render default events into both organiser and customer tables (if present)
-// Render organiser events table on load; customer table is rendered only after login
-renderEventsInto('events-table');
-
-function renderStaffTable() {
-    const table = document.getElementById('staff-table');
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    
-    // Filter staff by current event ID
-    const filteredStaff = sampleStaff.filter(s => s.eventId === currentViewEventId);
-    
-    filteredStaff.forEach(staff => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${staff.staffId}</td>
-            <td>${staff.name}</td>
-            <td>${staff.role}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    if (filteredStaff.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" style="text-align:center; color:#999;">No staff assigned to this event</td>';
-        tbody.appendChild(tr);
-    }
-}
-
-function renderVendorsTable() {
-    const table = document.getElementById('vendors-table');
-    if (!table) return;
-    const tbody = table.querySelector('tbody');
-    tbody.innerHTML = '';
-    
-    // Filter vendors by current event ID
-    const filteredVendors = sampleVendors.filter(v => v.eventId === currentViewEventId);
-    
-    filteredVendors.forEach(vendor => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${vendor.vendorId}</td>
-            <td>${vendor.name}</td>
-            <td>${vendor.service}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    if (filteredVendors.length === 0) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="3" style="text-align:center; color:#999;">No vendors assigned to this event</td>';
-        tbody.appendChild(tr);
-    }
-}
-
-// STAFF CRUD FUNCTIONS
-function openAddStaff() {
-    clearForm('add-staff-form');
-    document.getElementById('add-staff-form').reset();
-    openModal(addStaffModal);
-}
-
-function openModifyStaffRequest() {
-    clearForm('modify-staff-request-form');
-    document.getElementById('modify-staff-request-form').reset();
-    openModal(modifyStaffRequestModal);
-}
-
-function openDeleteStaff() {
-    clearForm('delete-staff-form');
-    document.getElementById('delete-staff-form').reset();
-    openModal(deleteStaffModal);
-}
-
-// VENDOR CRUD FUNCTIONS
-function openAddVendor() {
-    clearForm('add-vendor-form');
-    document.getElementById('add-vendor-form').reset();
-    openModal(addVendorModal);
-}
-
-function openModifyVendorRequest() {
-    clearForm('modify-vendor-request-form');
-    document.getElementById('modify-vendor-request-form').reset();
-    openModal(modifyVendorRequestModal);
-}
-
-function openDeleteVendor() {
-    clearForm('delete-vendor-form');
-    document.getElementById('delete-vendor-form').reset();
-    openModal(deleteVendorModal);
-}
-
-// Add Staff Form Handler
-document.getElementById('add-staff-form').onsubmit = (e) => {
-    e.preventDefault();
-    const name = document.getElementById('add-staff-name').value;
-    const role = document.getElementById('add-staff-role').value;
-    
-    const newStaffId = 'S' + (Math.max(...sampleStaff.map(s => parseInt(s.staffId.substring(1)) || 0)), 0) + 1;
-    sampleStaff.push({ staffId: newStaffId, name, role, eventId: currentViewEventId });
-    
-    showMessage(`Staff member '${name}' added successfully!`, 'success');
-    closeModal(addStaffModal);
-    renderStaffTable();
-};
-
-// Delete Staff Form Handler
-document.getElementById('delete-staff-form').onsubmit = (e) => {
-    e.preventDefault();
-    const staffId = document.getElementById('delete-staff-id').value;
-    const idx = sampleStaff.findIndex(s => s.staffId === staffId);
-    
-    if (idx < 0) {
-        showMessage(`Staff ID '${staffId}' not found.`, 'error');
-        return;
-    }
-    
-    const staff = sampleStaff[idx];
-    sampleStaff.splice(idx, 1);
-    showMessage(`Staff member '${staff.name}' deleted successfully!`, 'success');
-    closeModal(deleteStaffModal);
-    renderStaffTable();
-};
-
-// Modify Staff Request Form Handler
-document.getElementById('modify-staff-request-form').onsubmit = (e) => {
-    e.preventDefault();
-    const staffId = document.getElementById('modify-staff-id').value;
-    const staff = sampleStaff.find(s => s.staffId === staffId);
-    
-    if (!staff) {
-        showMessage(`Staff ID '${staffId}' not found.`, 'error');
-        return;
-    }
-    
-    document.getElementById('edit-staff-id').value = staff.staffId;
-    document.getElementById('edit-staff-name').value = staff.name;
-    document.getElementById('edit-staff-role').value = staff.role;
-    
-    closeModal(modifyStaffRequestModal);
-    openModal(editStaffModal);
-};
-
-// Edit Staff Form Handler
-document.getElementById('edit-staff-form').onsubmit = (e) => {
-    e.preventDefault();
-    const staffId = document.getElementById('edit-staff-id').value;
-    const name = document.getElementById('edit-staff-name').value;
-    const role = document.getElementById('edit-staff-role').value;
-    
-    const staff = sampleStaff.find(s => s.staffId === staffId);
-    if (staff) {
-        staff.name = name;
-        staff.role = role;
-        showMessage(`Staff member updated successfully!`, 'success');
-    }
-    
-    closeModal(editStaffModal);
-    renderStaffTable();
-};
-
-// Add Vendor Form Handler
-document.getElementById('add-vendor-form').onsubmit = (e) => {
-    e.preventDefault();
-    const name = document.getElementById('add-vendor-name').value;
-    const service = document.getElementById('add-vendor-service').value;
-    
-    const newVendorId = 'V' + (Math.max(...sampleVendors.map(v => parseInt(v.vendorId.substring(1)) || 0)), 0) + 1;
-    sampleVendors.push({ vendorId: newVendorId, name, service, eventId: currentViewEventId });
-    
-    showMessage(`Vendor '${name}' added successfully!`, 'success');
-    closeModal(addVendorModal);
-    renderVendorsTable();
-};
-
-// Delete Vendor Form Handler
-document.getElementById('delete-vendor-form').onsubmit = (e) => {
-    e.preventDefault();
-    const vendorId = document.getElementById('delete-vendor-id').value;
-    const idx = sampleVendors.findIndex(v => v.vendorId === vendorId);
-    
-    if (idx < 0) {
-        showMessage(`Vendor ID '${vendorId}' not found.`, 'error');
-        return;
-    }
-    
-    const vendor = sampleVendors[idx];
-    sampleVendors.splice(idx, 1);
-    showMessage(`Vendor '${vendor.name}' deleted successfully!`, 'success');
-    closeModal(deleteVendorModal);
-    renderVendorsTable();
-};
-
-// Modify Vendor Request Form Handler
-document.getElementById('modify-vendor-request-form').onsubmit = (e) => {
-    e.preventDefault();
-    const vendorId = document.getElementById('modify-vendor-id').value;
-    const vendor = sampleVendors.find(v => v.vendorId === vendorId);
-    
-    if (!vendor) {
-        showMessage(`Vendor ID '${vendorId}' not found.`, 'error');
-        return;
-    }
-    
-    document.getElementById('edit-vendor-id').value = vendor.vendorId;
-    document.getElementById('edit-vendor-name').value = vendor.name;
-    document.getElementById('edit-vendor-service').value = vendor.service;
-    
-    closeModal(modifyVendorRequestModal);
-    openModal(editVendorModal);
-};
-
-// Edit Vendor Form Handler
-document.getElementById('edit-vendor-form').onsubmit = (e) => {
-    e.preventDefault();
-    const vendorId = document.getElementById('edit-vendor-id').value;
-    const name = document.getElementById('edit-vendor-name').value;
-    const service = document.getElementById('edit-vendor-service').value;
-    
-    const vendor = sampleVendors.find(v => v.vendorId === vendorId);
-    if (vendor) {
-        vendor.name = name;
-        vendor.service = service;
-        showMessage(`Vendor updated successfully!`, 'success');
-    }
-    
-    closeModal(editVendorModal);
-    renderVendorsTable();
-};
-
-// Add this helper function at the top of the file
+// Clear form helper
 function clearForm(formId) {
     const form = document.getElementById(formId);
     if (form) form.reset();
+}
+
+// ======================= LOGIN & SIGNUP =======================
+async function openLogin(userType) {
+    clearForm('login-form');
+    const modal = document.getElementById('login-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
+    modal.dataset.userType = userType;
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    submitBtn.onclick = async (e) => {
+        e.preventDefault();
+        
+        const username = modal.querySelector('#login-username').value.trim();
+        const password = modal.querySelector('#login-password').value.trim();
+        
+        if (!username || !password) {
+            showMessage('Please fill all fields', 'error');
+            return;
+        }
+        
+        try {
+            const result = userType === 'organiser' 
+                ? await window.api.organiserLogin(username, password)
+                : await window.api.customerLogin(username, password);
+            
+            if (result.success) {
+                currentUser = result.user;
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                showMessage(`Welcome ${result.user.name}!`, 'success');
+                
+                if (userType === 'organiser') {
+                    showMenu('events');
+                    setTimeout(() => loadEventsTable(), 100);
+                } else {
+                    showMenu('customerEvents');
+                    setTimeout(() => loadCustomerEventsTable(), 100);
+                }
+            } else {
+                showMessage(result.message || 'Login failed', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+async function openSignup(userType) {
+    clearForm('signup-form');
+    const modal = document.getElementById('signup-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
+    modal.dataset.userType = userType;
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    submitBtn.onclick = async (e) => {
+        e.preventDefault();
+        
+        const name = modal.querySelector('#signup-name').value.trim();
+        const email = modal.querySelector('#signup-email').value.trim();
+        const username = modal.querySelector('#signup-username').value.trim();
+        const password = modal.querySelector('#signup-password').value.trim();
+        const passwordConfirm = modal.querySelector('#signup-password-confirm').value.trim();
+        
+        if (!name || !email || !username || !password || !passwordConfirm) {
+            showMessage('Please fill all required fields', 'error');
+            return;
+        }
+        
+        if (password !== passwordConfirm) {
+            showMessage('Passwords do not match', 'error');
+            return;
+        }
+        
+        try {
+            const data = { name, email, username, password };
+            
+            const result = userType === 'organiser'
+                ? await window.api.organiserSignup(data)
+                : await window.api.customerSignup(data);
+            
+            if (result.success) {
+                showMessage(`${userType === 'organiser' ? 'Organiser' : 'Customer'} registered! ID: ${result.ID}`, 'success');
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                clearForm('signup-form');
+            } else {
+                showMessage(result.message || 'Signup failed', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+// ======================= EVENT OPERATIONS =======================
+async function openAddEvent() {
+    clearForm('add-event-form');
+    const modal = document.getElementById('add-event-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    submitBtn.onclick = async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('event-name')?.value.trim();
+        const venue = document.getElementById('event-venue')?.value.trim();
+        const startDate = document.getElementById('event-start')?.value.trim();
+        const endDate = document.getElementById('event-end')?.value.trim();
+        const totalSeatsStr = document.getElementById('event-seats')?.value.trim();
+        const typeStr = document.getElementById('event-type')?.value;
+        
+        const totalSeats = totalSeatsStr ? parseInt(totalSeatsStr) : 0;
+        const type = typeStr ? parseInt(typeStr) : 1;
+        
+        if (!name || !venue || !startDate || !endDate || !totalSeats || totalSeats <= 0) {
+            showMessage('Please fill all fields correctly', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.eventAdd({
+                name, venue, startDate, endDate, totalSeats, type,
+                orgID: currentUser ? currentUser.ID : 0,
+                orgName: currentUser ? currentUser.name : 'Unknown'
+            });
+            
+            if (result.success) {
+                showMessage('Event added successfully!', 'success');
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                clearForm('add-event-form');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await loadEventsTable();
+            } else {
+                showMessage(result.message || 'Failed to add event', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+async function loadEventsTable() {
+    try {
+        const result = await window.api.eventGetAll();
+        const tbody = document.querySelector('#events-table tbody');
+        
+        if (!tbody) return;
+        
+        if (result.success && result.events && result.events.length > 0) {
+            tbody.innerHTML = '';
+            result.events.forEach(event => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${event.ID}</td>
+                    <td>${event.name || 'N/A'}</td>
+                    <td>${event.venue || 'N/A'}</td>
+                    <td>${event.startDate || 'N/A'}</td>
+                    <td>${event.endDate || 'N/A'}</td>
+                    <td>${event.totalSeats || 0}</td>
+                    <td>${event.soldTickets || 0}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="7">No events yet</td></tr>';
+        }
+    } catch (error) {
+        showMessage(`Error loading events: ${error.message}`, 'error');
+    }
+}
+
+function createModifyRequestModal() {
+    const modal = document.createElement('div');
+    modal.id = 'modify-request-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Modify Event</h2>
+                <button class="close" data-close="modify-request-modal">×</button>
+            </div>
+            <form id="modify-request-form" class="modal-form">
+                <label for="modify-event-id">Event ID</label>
+                <input id="modify-event-id" type="number" required placeholder="Enter Event ID">
+                <div class="modal-actions">
+                    <button type="submit">Find Event</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+async function openModifyRequest() {
+    clearForm('modify-request-form');
+    const modal = document.getElementById('modify-request-modal') || createModifyRequestModal();
+    const overlay = document.getElementById('modal-overlay');
+    
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    submitBtn.textContent = 'Find Event';
+    
+    submitBtn.onclick = async (e) => {
+        e.preventDefault();
+        const eventIDStr = document.getElementById('modify-event-id')?.value.trim();
+        
+        if (!eventIDStr) {
+            showMessage('Event ID is required', 'error');
+            return;
+        }
+        
+        const eventID = parseInt(eventIDStr);
+        if (isNaN(eventID)) {
+            showMessage('Event ID must be a valid number', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.eventGetAll();
+            const event = result.events.find(e => e.ID === eventID);
+            
+            if (!event) {
+                showMessage('Event not found', 'error');
+                return;
+            }
+            
+            showModifyEventForm(event, modal, overlay);
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+function showModifyEventForm(event, modal, overlay) {
+    const form = modal.querySelector('form');
+    form.innerHTML = `
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Modify event details below:</p>
+        
+        <label for="modify-event-id-display">Event ID</label>
+        <input id="modify-event-id-display" type="number" value="${event.ID}" disabled style="background: #f5f5f5;">
+
+        <label for="modify-event-name">Event Name</label>
+        <input id="modify-event-name" type="text" value="${event.name}">
+
+        <label for="modify-event-start">Start Date</label>
+        <input id="modify-event-start" type="date" value="${event.startDate}">
+
+        <label for="modify-event-end">End Date</label>
+        <input id="modify-event-end" type="date" value="${event.endDate}">
+
+        <label for="modify-event-venue">Venue</label>
+        <input id="modify-event-venue" type="text" value="${event.venue}">
+
+        <label for="modify-event-seats">Total Seats</label>
+        <input id="modify-event-seats" type="number" value="${event.totalSeats}">
+
+        <div class="modal-actions">
+            <button type="button" id="modify-back-btn">Back</button>
+            <button type="submit" id="modify-save-btn">Save Changes</button>
+        </div>
+    `;
+    
+    document.getElementById('modify-back-btn').onclick = (e) => {
+        e.preventDefault();
+        openModifyRequest();
+    };
+    
+    document.getElementById('modify-save-btn').onclick = async (e) => {
+        e.preventDefault();
+        
+        const name = document.getElementById('modify-event-name')?.value.trim();
+        const startDate = document.getElementById('modify-event-start')?.value.trim();
+        const endDate = document.getElementById('modify-event-end')?.value.trim();
+        const venue = document.getElementById('modify-event-venue')?.value.trim();
+        const totalSeats = parseInt(document.getElementById('modify-event-seats')?.value || 0);
+        
+        try {
+            const result = await window.api.eventModify({
+                ID: event.ID,
+                name: name || event.name,
+                startDate: startDate || event.startDate,
+                endDate: endDate || event.endDate,
+                venue: venue || event.venue,
+                totalSeats: totalSeats || event.totalSeats
+            });
+            
+            if (result.success) {
+                showMessage('Event updated successfully!', 'success');
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                await loadEventsTable();
+            } else {
+                showMessage(result.message || 'Failed to modify event', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+function createDeleteEventModal() {
+    const modal = document.createElement('div');
+    modal.id = 'delete-event-modal';
+    modal.className = 'modal hidden';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Delete Event</h2>
+                <button class="close" data-close="delete-event-modal">×</button>
+            </div>
+            <form id="delete-event-form" class="modal-form">
+                <label for="delete-event-id">Event ID</label>
+                <input id="delete-event-id" type="number" required placeholder="Enter Event ID">
+                <div class="modal-actions">
+                    <button type="submit">Delete Event</button>
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+}
+
+async function openDeleteEvent() {
+    clearForm('delete-event-form');
+    const modal = document.getElementById('delete-event-modal') || createDeleteEventModal();
+    const overlay = document.getElementById('modal-overlay');
+    
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+    
+    const submitBtn = modal.querySelector('button[type="submit"]');
+    submitBtn.onclick = async (e) => {
+        e.preventDefault();
+        const eventID = parseInt(document.getElementById('delete-event-id')?.value || 0);
+        
+        if (!eventID) {
+            showMessage('Please enter Event ID', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.eventDelete(eventID);
+            
+            if (result.success) {
+                showMessage('Event deleted successfully!', 'success');
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+                await loadEventsTable();
+            } else {
+                showMessage(result.message || 'Failed to delete event', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+}
+
+// ======================= EVENT DETAILS =======================
+async function openEventDetails() {
+    const result = await window.api.eventGetAll();
+    
+    if (!result.success || result.events.length === 0) {
+        showMessage('No events to view', 'error');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'event-select-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Select Event</h2>
+                <button class="close" data-close="event-select-modal">×</button>
+            </div>
+            <div id="events-list" style="max-height: 400px; overflow-y: auto;"></div>
+        </div>
+    `;
+    modal.id = 'event-select-modal';
+    document.body.appendChild(modal);
+    
+    const eventsList = modal.querySelector('#events-list');
+    eventsList.innerHTML = result.events.map((event, index) => `
+        <div data-event-id="${event.ID}" data-event-index="${index}" style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; cursor: pointer; border-radius: 4px; background: #fff;">
+            <strong>${event.name}</strong> (ID: ${event.ID})<br>
+            <small>${event.venue} | ${event.startDate}</small>
+        </div>
+    `).join('');
+    
+    // Add event delegation for event selection
+    eventsList.addEventListener('click', (e) => {
+        const eventDiv = e.target.closest('[data-event-id]');
+        if (eventDiv) {
+            const eventID = parseInt(eventDiv.dataset.eventId);
+            selectEventDetail(eventID);
+        }
+    });
+    
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.remove('hidden');
+}
+
+async function selectEventDetail(eventID) {
+    try {
+        const result = await window.api.eventGetAll();
+        const event = result.events.find(e => e.ID === eventID);
+        
+        if (!event) {
+            showMessage('Event not found', 'error');
+            return;
+        }
+        
+        currentEventDetail = event;
+        currentViewEventId = eventID;
+        
+        const selectModal = document.getElementById('event-select-modal');
+        if (selectModal) selectModal.remove();
+        
+        const overlay = document.getElementById('modal-overlay');
+        overlay.classList.add('hidden');
+        
+        updateEventDetailsMenu(event);
+        showMenu('details');
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+async function openRegistrationsModal() {
+    if (!currentUser || !currentUser.ID) {
+        showMessage('Please login to view registrations', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('registrations-modal') || createRegistrationsModal();
+    const overlay = document.getElementById('modal-overlay');
+
+    modal.classList.remove('hidden');
+    overlay.classList.remove('hidden');
+
+    const list = document.getElementById('registrations-list');
+    if (!list) {
+        showMessage('Error loading registrations modal', 'error');
+        return;
+    }
+    
+    list.innerHTML = '<p>Loading...</p>';
+
+    try {
+        const res = await window.api.customerGetRegistrations(currentUser.ID);
+
+        if (!res.success || !res.registrations || res.registrations.length === 0) {
+            list.innerHTML = '<p>No registrations yet</p>';
+            return;
+        }
+
+        let html = `<table class="events-table"><thead><tr><th>Event ID</th><th>Event Name</th><th>Ticket#</th><th>Fee Status</th></tr></thead><tbody>`;
+        res.registrations.forEach(r => {
+            // Use eventName from the response (it's already populated by the backend)
+            const eventName = r.eventName || `Event ${r.eventID}`;
+            html += `<tr>
+                <td>${r.eventID}</td>
+                <td>${eventName}</td>
+                <td>${r.ticketNum}</td>
+                <td>${r.feeStatus}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        list.innerHTML = html;
+    } catch (error) {
+        list.innerHTML = `<p>Error: ${error.message}</p>`;
+    }
+}
+
+// ======================= ORGANISER STAFF MANAGEMENT =======================
+async function showEditStaffPage() {
+    if (!currentViewEventId) {
+        showMessage('No event selected', 'error');
+        return;
+    }
+    
+    try {
+        const result = await window.api.staffGetByEvent(currentViewEventId);
+        const detailsMenu = document.getElementById('details-menu');
+        
+        let html = `<h2>${currentEventDetail.name} - Manage Staff</h2>
+            <div class="button-group">
+                <button id="add-staff-btn">Add Staff</button>
+                <button id="staff-back-btn">Back</button>
+            </div>`;
+        
+        if (result.success && result.staff && result.staff.length > 0) {
+            html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Team</th><th>Position</th><th>Actions</th></tr></thead><tbody>`;
+            result.staff.forEach(staff => {
+                html += `
+                    <tr>
+                        <td>${staff.ID}</td>
+                        <td>${staff.name}</td>
+                        <td>${staff.email}</td>
+                        <td>${staff.team}</td>
+                        <td>${staff.position}</td>
+                        <td>
+                            <button data-staff-id="${staff.ID}" class="edit-staff-btn" style="margin-right: 5px;">Edit</button>
+                            <button data-staff-id="${staff.ID}" class="delete-staff-btn">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No staff members</p>';
+        }
+        
+        detailsMenu.innerHTML = html;
+        
+        // Add event delegation for staff actions
+        detailsMenu.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('edit-staff-btn')) {
+                const staffID = parseInt(e.target.dataset.staffId);
+                const staff = result.staff.find(s => s.ID === staffID);
+                showEditStaffForm(staff);
+            }
+            if (e.target.classList.contains('delete-staff-btn')) {
+                const staffID = parseInt(e.target.dataset.staffId);
+                if (confirm('Are you sure you want to delete this staff member?')) {
+                    await deleteStaffMember(staffID);
+                }
+            }
+        });
+        
+        document.getElementById('add-staff-btn').onclick = showAddStaffForm;
+        document.getElementById('staff-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+function showEditStaffForm(staff) {
+    const detailsMenu = document.getElementById('details-menu');
+    detailsMenu.innerHTML = `
+        <h2>${currentEventDetail.name} - Edit Staff Member</h2>
+        <form id="edit-staff-form" class="modal-form" style="max-width: 400px;">
+            <label for="edit-staff-id">Staff ID</label>
+            <input id="edit-staff-id" type="number" value="${staff.ID}" disabled style="background: #f5f5f5;">
+
+            <label for="edit-staff-name">Name</label>
+            <input id="edit-staff-name" type="text" value="${staff.name}" required>
+
+            <label for="edit-staff-email">Email</label>
+            <input id="edit-staff-email" type="email" value="${staff.email}" required>
+
+            <label for="edit-staff-team">Team</label>
+            <input id="edit-staff-team" type="text" value="${staff.team}" required>
+
+            <label for="edit-staff-position">Position</label>
+            <input id="edit-staff-position" type="text" value="${staff.position}" required>
+
+            <div class="button-group">
+                <button type="button" id="edit-staff-cancel-btn">Cancel</button>
+                <button type="submit" id="edit-staff-save-btn">Save Changes</button>
+            </div>
+        </form>
+    `;
+    
+    document.getElementById('edit-staff-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('edit-staff-name').value.trim();
+        const email = document.getElementById('edit-staff-email').value.trim();
+        const team = document.getElementById('edit-staff-team').value.trim();
+        const position = document.getElementById('edit-staff-position').value.trim();
+        
+        if (!name || !email || !team || !position) {
+            showMessage('Please fill all fields', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.staffUpdate({
+                ID: staff.ID,
+                eventID: currentViewEventId,
+                name, email, team, position
+            });
+            
+            if (result.success) {
+                showMessage('Staff updated!', 'success');
+                await showEditStaffPage();
+            } else {
+                showMessage(result.message || 'Failed to update', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+    
+    document.getElementById('edit-staff-cancel-btn').onclick = showEditStaffPage;
+};
+
+// ======================= ORGANISER VENDOR MANAGEMENT =======================
+async function showEditVendorPage() {
+    if (!currentViewEventId) {
+        showMessage('No event selected', 'error');
+        return;
+    }
+    
+    try {
+        const result = await window.api.vendorGetByEvent(currentViewEventId);
+        const detailsMenu = document.getElementById('details-menu');
+        
+        let html = `<h2>${currentEventDetail.name} - Manage Vendors</h2>
+            <div class="button-group">
+                <button id="add-vendor-btn">Add Vendor</button>
+                <button id="vendor-back-btn">Back</button>
+            </div>`;
+        
+        if (result.success && result.vendors && result.vendors.length > 0) {
+            html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Product/Service</th><th>Charges Due</th><th>Actions</th></tr></thead><tbody>`;
+            result.vendors.forEach(vendor => {
+                html += `
+                    <tr>
+                        <td>${vendor.ID}</td>
+                        <td>${vendor.name}</td>
+                        <td>${vendor.email}</td>
+                        <td>${vendor.prod_serv}</td>
+                        <td>${vendor.chargesDue}</td>
+                        <td>
+                            <button data-vendor-id="${vendor.ID}" class="edit-vendor-btn" style="margin-right: 5px;">Edit</button>
+                            <button data-vendor-id="${vendor.ID}" class="delete-vendor-btn">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No vendors</p>';
+        }
+        
+        detailsMenu.innerHTML = html;
+        
+        // Add event delegation for vendor actions
+        detailsMenu.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('edit-vendor-btn')) {
+                const vendorID = parseInt(e.target.dataset.vendorId);
+                const vendor = result.vendors.find(v => v.ID === vendorID);
+                showEditVendorForm(vendor);
+            }
+            if (e.target.classList.contains('delete-vendor-btn')) {
+                const vendorID = parseInt(e.target.dataset.vendorId);
+                if (confirm('Are you sure you want to delete this vendor?')) {
+                    await deleteVendor(vendorID);
+                }
+            }
+        });
+        
+        document.getElementById('add-vendor-btn').onclick = showAddVendorForm;
+        document.getElementById('vendor-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+function showEditVendorForm(vendor) {
+    const detailsMenu = document.getElementById('details-menu');
+    detailsMenu.innerHTML = `
+        <h2>${currentEventDetail.name} - Edit Vendor</h2>
+        <form id="edit-vendor-form" class="modal-form" style="max-width: 400px;">
+            <label for="edit-vendor-id">Vendor ID</label>
+            <input id="edit-vendor-id" type="number" value="${vendor.ID}" disabled style="background: #f5f5f5;">
+
+            <label for="edit-vendor-name">Name</label>
+            <input id="edit-vendor-name" type="text" value="${vendor.name}" required>
+
+            <label for="edit-vendor-email">Email</label>
+            <input id="edit-vendor-email" type="email" value="${vendor.email}" required>
+
+            <label for="edit-vendor-service">Product/Service</label>
+            <input id="edit-vendor-service" type="text" value="${vendor.prod_serv}" required>
+
+            <label for="edit-vendor-charges">Charges Due</label>
+            <input id="edit-vendor-charges" type="number" step="0.01" value="${vendor.chargesDue}">
+
+            <div class="button-group">
+                <button type="button" id="edit-vendor-cancel-btn">Cancel</button>
+                <button type="submit" id="edit-vendor-save-btn">Save Changes</button>
+            </div>
+        </form>
+    `;
+    
+    document.getElementById('edit-vendor-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('edit-vendor-name').value.trim();
+        const email = document.getElementById('edit-vendor-email').value.trim();
+        const prod_serv = document.getElementById('edit-vendor-service').value.trim();
+        const chargesDue = parseFloat(document.getElementById('edit-vendor-charges').value || 0);
+        
+        if (!name || !email || !prod_serv) {
+            showMessage('Please fill required fields', 'error');
+            return;
+        }
+        
+        try {
+            const result = await window.api.vendorUpdate({
+                ID: vendor.ID,
+                eventID: currentViewEventId,
+                name, email, prod_serv, chargesDue
+            });
+            
+            if (result.success) {
+                showMessage('Vendor updated!', 'success');
+                await showEditVendorPage();
+            } else {
+                showMessage(result.message || 'Failed to update', 'error');
+            }
+        } catch (error) {
+            showMessage(`Error: ${error.message}`, 'error');
+        }
+    };
+    
+    document.getElementById('edit-vendor-cancel-btn').onclick = showEditVendorPage;
+}
+
+// ======================= ORGANISER CUSTOMER FEE STATUS MANAGEMENT =======================
+async function showManageCustomerFeesPage() {
+    if (!currentEventDetail) {
+        showMessage('No event selected', 'error');
+        return;
+    }
+    
+    try {
+        const result = await window.api.registrationGetByEvent(currentEventDetail.ID);
+        const detailsMenu = document.getElementById('details-menu');
+        
+        let html = `<h2>${currentEventDetail.name} - Manage Customer Fees</h2>
+            <div class="button-group"><button id="fees-back-btn">Back</button></div>`;
+        
+        if (result.success && result.registrations && result.registrations.length > 0) {
+            html += `<table class="events-table"><thead><tr><th>Customer ID</th><th>Ticket Number</th><th>Fee Status</th><th>Action</th></tr></thead><tbody>`;
+            result.registrations.forEach(reg => {
+                const toggleStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
+                html += `
+                    <tr>
+                        <td>${reg.custID}</td>
+                        <td>${reg.ticketNum}</td>
+                        <td><strong>${reg.feeStatus}</strong></td>
+                        <td>
+                            <button data-reg-id="${reg.ID}" class="toggle-fee-btn">Mark as ${toggleStatus}</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No customers registered</p>';
+        }
+        
+        detailsMenu.innerHTML = html;
+        
+        // Add event delegation for fee toggle
+        detailsMenu.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('toggle-fee-btn')) {
+                const regID = parseInt(e.target.dataset.regId);
+                const reg = result.registrations.find(r => r.ID === regID);
+                const newStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
+                
+                try {
+                    const updateRes = await window.api.updateCustomerFeeStatus({
+                        registrationID: regID,
+                        feeStatus: newStatus
+                    });
+                    
+                    if (updateRes.success) {
+                        showMessage(`Fee status updated to ${newStatus}!`, 'success');
+                        await showManageCustomerFeesPage();
+                    } else {
+                        showMessage(updateRes.message || 'Failed to update', 'error');
+                    }
+                } catch (error) {
+                    showMessage(`Error: ${error.message}`, 'error');
+                }
+            }
+        });
+        
+        document.getElementById('fees-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
+    } catch (error) {
+        showMessage(`Error: ${error.message}`, 'error');
+    }
+}
+
+// Update the updateEventDetailsMenu to include new buttons:
+function updateEventDetailsMenu(event) {
+    const detailsMenu = document.getElementById('details-menu');
+    
+    detailsMenu.innerHTML = `
+        <h2>${event.name} - Details</h2>
+        
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <p><strong>Event ID:</strong> ${event.ID}</p>
+            <p><strong>Venue:</strong> ${event.venue}</p>
+            <p><strong>Start Date:</strong> ${event.startDate}</p>
+            <p><strong>End Date:</strong> ${event.endDate}</p>
+            <p><strong>Seats:</strong> ${event.soldTickets}/${event.totalSeats}</p>
+        </div>
+        
+        <div class="button-group">
+            <button id="details-customer-data-btn">Customer Data</button>
+            <button id="details-manage-fees-btn">Manage Fees</button>
+            <button id="details-edit-staff-btn">Edit Staff</button>
+            <button id="details-edit-vendor-btn">Edit Vendors</button>
+            <button id="details-back-btn">Back</button>
+        </div>
+    `;
+    
+    document.getElementById('details-customer-data-btn').onclick = showCustomerDataPage;
+    document.getElementById('details-manage-fees-btn').onclick = showManageCustomerFeesPage;
+    document.getElementById('details-edit-staff-btn').onclick = showEditStaffPage;
+    document.getElementById('details-edit-vendor-btn').onclick = showEditVendorPage;
+    document.getElementById('details-back-btn').onclick = () => {
+        currentEventDetail = null;
+        currentViewEventId = null;
+        showMenu('events');
+    };
 }
