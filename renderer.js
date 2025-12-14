@@ -45,16 +45,26 @@ async function openLogin(userType) {
     const modal = document.getElementById('login-modal');
     const overlay = document.getElementById('modal-overlay');
     
+    // Clear all form fields
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.reset();
+        loginForm.querySelectorAll('input').forEach(input => {
+            input.value = '';
+        });
+    }
+    
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
-    const loginForm = document.getElementById('login-form');
     const loginToSignup = document.getElementById('login-to-signup');
     
-    loginToSignup.onclick = () => {
-        modal.classList.add('hidden');
-        openSignup(userType);
-    };
+    if (loginToSignup) {
+        loginToSignup.onclick = () => {
+            modal.classList.add('hidden');
+            openSignup(userType);
+        };
+    }
     
     loginForm.onsubmit = async (e) => {
         e.preventDefault();
@@ -80,8 +90,12 @@ async function openLogin(userType) {
                 
                 modal.classList.add('hidden');
                 overlay.classList.add('hidden');
-                document.getElementById('login-username').value = '';
-                document.getElementById('login-password').value = '';
+                
+                // Clear the form
+                loginForm.reset();
+                loginForm.querySelectorAll('input').forEach(input => {
+                    input.value = '';
+                });
                 
                 // Navigate to appropriate menu
                 if (userType === 'organiser') {
@@ -102,16 +116,26 @@ async function openSignup(userType) {
     const modal = document.getElementById('signup-modal');
     const overlay = document.getElementById('modal-overlay');
     
+    // Clear all form fields
+    const signupForm = document.getElementById('signup-form');
+    if (signupForm) {
+        signupForm.reset();
+        signupForm.querySelectorAll('input').forEach(input => {
+            input.value = '';
+        });
+    }
+    
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
-    const signupForm = document.getElementById('signup-form');
     const signupToLogin = document.getElementById('signup-to-login');
     
-    signupToLogin.onclick = () => {
-        modal.classList.add('hidden');
-        openLogin(userType);
-    };
+    if (signupToLogin) {
+        signupToLogin.onclick = () => {
+            modal.classList.add('hidden');
+            openLogin(userType);
+        };
+    }
     
     signupForm.onsubmit = async (e) => {
         e.preventDefault();
@@ -147,7 +171,14 @@ async function openSignup(userType) {
             if (result.success) {
                 showMessage('Account created! Please login.', 'success');
                 
+                // Clear the form
+                signupForm.reset();
+                signupForm.querySelectorAll('input').forEach(input => {
+                    input.value = '';
+                });
+                
                 modal.classList.add('hidden');
+                overlay.classList.add('hidden');
                 setTimeout(() => openLogin(userType), 500);
             } else {
                 showMessage(result.message || 'Signup failed', 'error');

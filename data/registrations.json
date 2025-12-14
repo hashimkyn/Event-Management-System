@@ -22,5 +22,13 @@
     "ticketNum": 78566,
     "feeStatus": "Pending",
     "registeredDate": "2025-12-13T18:19:54.008Z"
+  },
+  {
+    "ID": 4,
+    "custID": 2,
+    "eventID": 948,
+    "ticketNum": 32750,
+    "feeStatus": "Paid",
+    "registeredDate": "2025-12-14T05:09:27.554Z"
   }
 ]
