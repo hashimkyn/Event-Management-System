@@ -10,6 +10,206 @@ if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
+// ======================= BINARY FILE PARSING =======================
+// Struct sizes based on backend.cpp
+const ORGANISER_SIZE = 140; // 4 + 50 + 50 + 20 + 20
+const CUSTOMER_SIZE = 140;  // 4 + 50 + 50 + 20 + 20
+const EVENT_SIZE = 216;     // 4 + 4 + 50 + 50 + 50 + 20 + 20 + 4 + 4 + 4
+const STAFF_SIZE = 136;     // 4 + 4 + 50 + 50 + 20 + 20
+const VENDOR_SIZE = 132;    // 4 + 4 + 50 + 50 + 50 + 4
+const REGISTRATION_SIZE = 24; // 4 + 4 + 4 + 10
+
+function readNullTerminatedString(buffer, offset, maxLen) {
+    let str = '';
+    for (let i = 0; i < maxLen; i++) {
+        const byte = buffer[offset + i];
+        if (byte === 0) break;
+        str += String.fromCharCode(byte);
+    }
+    return str;
+}
+
+function readInt32LE(buffer, offset) {
+    return buffer.readInt32LE(offset);
+}
+
+function readFloatLE(buffer, offset) {
+    return buffer.readFloatLE(offset);
+}
+
+function parseOrganiser(buffer) {
+    return {
+        ID: readInt32LE(buffer, 0),
+        name: readNullTerminatedString(buffer, 4, 50),
+        email: readNullTerminatedString(buffer, 54, 50),
+        username: readNullTerminatedString(buffer, 104, 20),
+        password: readNullTerminatedString(buffer, 124, 20)
+    };
+}
+
+function parseCustomer(buffer) {
+    return {
+        ID: readInt32LE(buffer, 0),
+        name: readNullTerminatedString(buffer, 4, 50),
+        email: readNullTerminatedString(buffer, 54, 50),
+        username: readNullTerminatedString(buffer, 104, 20),
+        password: readNullTerminatedString(buffer, 124, 20)
+    };
+}
+
+function parseEvent(buffer) {
+    return {
+        ID: readInt32LE(buffer, 0),
+        orgID: readInt32LE(buffer, 4),
+        name: readNullTerminatedString(buffer, 8, 50),
+        orgName: readNullTerminatedString(buffer, 58, 50),
+        venue: readNullTerminatedString(buffer, 108, 50),
+        startDate: readNullTerminatedString(buffer, 158, 20),
+        endDate: readNullTerminatedString(buffer, 178, 20),
+        totalSeats: readInt32LE(buffer, 198),
+        soldTickets: readInt32LE(buffer, 202),
+        type: readInt32LE(buffer, 206)
+    };
+}
+
+function parseStaff(buffer) {
+    return {
+        ID: readInt32LE(buffer, 0),
+        eventID: readInt32LE(buffer, 4),
+        name: readNullTerminatedString(buffer, 8, 50),
+        email: readNullTerminatedString(buffer, 58, 50),
+        team: readNullTerminatedString(buffer, 108, 20),
+        position: readNullTerminatedString(buffer, 128, 20)
+    };
+}
+
+function parseVendor(buffer) {
+    return {
+        ID: readInt32LE(buffer, 0),
+        eventID: readInt32LE(buffer, 4),
+        name: readNullTerminatedString(buffer, 8, 50),
+        email: readNullTerminatedString(buffer, 58, 50),
+        prod_serv: readNullTerminatedString(buffer, 108, 50),
+        chargesDue: readFloatLE(buffer, 128)
+    };
+}
+
+function parseRegistration(buffer) {
+    return {
+        customerID: readInt32LE(buffer, 0),
+        eventID: readInt32LE(buffer, 4),
+        ticketNum: readInt32LE(buffer, 8),
+        feeStatus: readNullTerminatedString(buffer, 12, 10)
+    };
+}
+
+// ======================= FILE READING FUNCTIONS =======================
+function readAllFromDat(filename, parseFunc, size) {
+    const filepath = path.join(DATA_DIR, filename);
+    const results = [];
+    
+    if (!fs.existsSync(filepath)) {
+        return results;
+    }
+    
+    try {
+        const data = fs.readFileSync(filepath);
+        for (let i = 0; i < data.length; i += size) {
+            if (i + size <= data.length) {
+                results.push(parseFunc(data.slice(i, i + size)));
+            }
+        }
+    } catch (error) {
+        console.error(`Error reading ${filename}:`, error);
+    }
+    
+    return results;
+}
+
+function findById(filename, parseFunc, size, id) {
+    const filepath = path.join(DATA_DIR, filename);
+    
+    if (!fs.existsSync(filepath)) {
+        return null;
+    }
+    
+    try {
+        const data = fs.readFileSync(filepath);
+        for (let i = 0; i < data.length; i += size) {
+            if (i + size <= data.length) {
+                const obj = parseFunc(data.slice(i, i + size));
+                if (obj.ID === id) {
+                    return obj;
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error reading ${filename}:`, error);
+    }
+    
+    return null;
+}
+
+function findByUsername(filename, parseFunc, size, username) {
+    const filepath = path.join(DATA_DIR, filename);
+    
+    if (!fs.existsSync(filepath)) {
+        return null;
+    }
+    
+    try {
+        const data = fs.readFileSync(filepath);
+        for (let i = 0; i < data.length; i += size) {
+            if (i + size <= data.length) {
+                const obj = parseFunc(data.slice(i, i + size));
+                if (obj.username === username) {
+                    return obj;
+                }
+            }
+        }
+    } catch (error) {
+        console.error(`Error reading ${filename}:`, error);
+    }
+    
+    return null;
+}
+
+// Standalone executeCommand for use outside class
+function executeCommandSync(inputs) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(BACKEND_EXE, [], {
+            cwd: DATA_DIR,
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        // Send all inputs with newlines
+        const inputString = inputs.join('\n') + '\n';
+        child.stdin.write(inputString);
+        child.stdin.end();
+
+        child.on('close', (code) => {
+            resolve(stdout);
+        });
+
+        // Timeout after 15 seconds
+        setTimeout(() => {
+            child.kill();
+            reject(new Error('Backend timeout'));
+        }, 15000);
+    });
+}
+
 class BackendBridge {
     // Execute command by spawning backend process and sending input via stdin
     executeCommand(inputs) {
@@ -50,6 +250,12 @@ class BackendBridge {
     // ======================= ORGANISER FUNCTIONS =======================
     async organiserSignup(data) {
         try {
+            // Check if username already exists
+            const organisers = readAllFromDat('organisers.dat', parseOrganiser, ORGANISER_SIZE);
+            if (organisers && organisers.some(o => o.username === data.username)) {
+                return { success: false, message: 'Username already exists' };
+            }
+
             const inputs = [
                 '1',           // Choose Organiser
                 '1',           // Choose Signup
@@ -60,30 +266,23 @@ class BackendBridge {
                 '0'            // Exit (removed banking input)
             ];
 
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            await this.executeCommand(inputs);
 
-            // Parse the output to extract ID
-            const idMatch = output.match(/Your ID:\s*(\d+)/i) || output.match(/ID:\s*(\d+)/i);
-            
-            if (idMatch) {
+            // Read from organisers.dat to get the registered organiser
+            const allOrganisers = readAllFromDat('organisers.dat', parseOrganiser, ORGANISER_SIZE);
+            const newOrganiser = allOrganisers.find(o => o.username === data.username);
+
+            if (newOrganiser) {
                 return { 
                     success: true, 
-                    ID: parseInt(idMatch[1]), 
+                    ID: newOrganiser.ID, 
                     message: 'Organiser registered successfully!' 
                 };
             }
 
-            if (output.includes('registered')) {
-                return { 
-                    success: true, 
-                    ID: Math.floor(Math.random() * 900) + 100,
-                    message: 'Organiser registered successfully!' 
-                };
-            }
-
-            return { success: false, message: 'Signup failed' };
+            return { success: false, message: 'Username already exists' };
         } catch (error) {
+            console.error('organiserSignup error:', error);
             return { success: false, message: error.message };
         }
     }
@@ -127,6 +326,12 @@ class BackendBridge {
     // ======================= CUSTOMER FUNCTIONS =======================
     async customerSignup(data) {
         try {
+            // Check if username already exists
+            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            if (customers && customers.some(c => c.username === data.username)) {
+                return { success: false, message: 'Username already exists' };
+            }
+
             const inputs = [
                 '2',           // Choose Customer
                 '1',           // Choose Signup
@@ -137,63 +342,48 @@ class BackendBridge {
                 '0'            // Exit
             ];
 
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            await this.executeCommand(inputs);
 
-            const idMatch = output.match(/ID:\s*(\d+)/i);
-            
-            if (idMatch) {
+            // Read from customers.dat to get the registered customer
+            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            const newCustomer = allCustomers.find(c => c.username === data.username);
+
+            if (newCustomer) {
                 return { 
                     success: true, 
-                    ID: parseInt(idMatch[1]), 
-                    message: 'Customer registered successfully!' 
-                };
-            }
-
-            if (output.includes('registered')) {
-                return { 
-                    success: true, 
-                    ID: Math.floor(Math.random() * 900) + 100,
+                    ID: newCustomer.ID, 
                     message: 'Customer registered successfully!' 
                 };
             }
 
             return { success: false, message: 'Signup failed' };
         } catch (error) {
+            console.error('customerSignup error:', error);
             return { success: false, message: error.message };
         }
     }
 
     async customerLogin(username, password) {
         try {
-            const inputs = [
-                '2',           // Choose Customer
-                '2',           // Choose Login
-                username,
-                password,
-                '0'            // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
-
-            if (output.includes('Invalid credentials')) {
+            const customer = findByUsername('customers.dat', parseCustomer, CUSTOMER_SIZE, username);
+            
+            if (!customer) {
                 return { success: false, message: 'Invalid credentials' };
             }
 
-            if (output.includes('CUSTOMER')) {
+            if (customer.password === password) {
                 return {
                     success: true,
                     user: {
-                        ID: 999,
-                        name: username,
-                        email: 'customer@event.com',
-                        username: username
+                        ID: customer.ID,
+                        name: customer.name,
+                        email: customer.email,
+                        username: customer.username
                     }
                 };
             }
 
-            return { success: false, message: 'Login failed' };
+            return { success: false, message: 'Invalid credentials' };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -680,37 +870,37 @@ class BackendBridge {
 
     async customerSignup(data) {
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const customersFile = path.join(DATA_DIR, 'customers.json');
-            
-            let customers = [];
-            if (fs.existsSync(customersFile)) {
-                try {
-                    customers = JSON.parse(fs.readFileSync(customersFile, 'utf8'));
-                } catch (e) {
-                    customers = [];
-                }
-            }
-            
-            const exists = customers.find(c => c.username === data.username);
-            if (exists) {
+            // Check if username already exists
+            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            if (customers && customers.some(c => c.username === data.username)) {
                 return { success: false, message: 'Username already exists' };
             }
-            
-            const newCustomer = {
-                ID: customers.length + 1,
-                name: data.name,
-                email: data.email,
-                username: data.username,
-                password: data.password
-            };
-            
-            customers.push(newCustomer);
-            fs.writeFileSync(customersFile, JSON.stringify(customers, null, 2));
-            
-            console.log('Customer signed up:', newCustomer.ID);
-            return { success: true, ID: newCustomer.ID, message: 'Customer registered!' };
+
+            const inputs = [
+                '2',           // Choose Customer
+                '1',           // Choose Signup
+                data.name,
+                data.email,
+                data.username,
+                data.password,
+                '0'            // Exit
+            ];
+
+            await this.executeCommand(inputs);
+
+            // Read from customers.dat to get the registered customer
+            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            const newCustomer = allCustomers.find(c => c.username === data.username);
+
+            if (newCustomer) {
+                return { 
+                    success: true, 
+                    ID: newCustomer.ID, 
+                    message: 'Customer registered successfully!' 
+                };
+            }
+
+            return { success: false, message: 'Username already exists' };
         } catch (error) {
             console.error('customerSignup error:', error);
             return { success: false, message: error.message };
@@ -789,7 +979,7 @@ class BackendBridge {
                 custID: data.custID,
                 eventID: data.eventID,
                 ticketNum,
-                feeStatus: 'Pending',
+                feeStatus: 'Unpaid',
                 registeredDate: new Date().toISOString()
             });
             
@@ -836,9 +1026,10 @@ class BackendBridge {
                 }
             }
             
-            // Filter registrations for this customer and add event details
+            // Filter registrations for this customer and add event details, excluding deleted events
             const customerRegs = registrations
                 .filter(r => r.custID === custID)
+                .filter(r => events.some(e => e.ID === r.eventID)) // Only include registrations for events that still exist
                 .map(r => {
                     const event = events.find(e => e.ID === r.eventID);
                     return {

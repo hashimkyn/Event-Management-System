@@ -4,7 +4,7 @@
     "custID": 1,
     "eventID": 948,
     "ticketNum": 86887,
-    "feeStatus": "Paid",
+    "feeStatus": "Unpaid",
     "registeredDate": "2025-12-13T16:48:34.273Z"
   },
   {
@@ -12,7 +12,7 @@
     "custID": 1,
     "eventID": 671,
     "ticketNum": 78566,
-    "feeStatus": "Pending",
+    "feeStatus": "Unpaid",
     "registeredDate": "2025-12-13T18:19:54.008Z"
   },
   {
@@ -20,7 +20,7 @@
     "custID": 2,
     "eventID": 948,
     "ticketNum": 32750,
-    "feeStatus": "Paid",
+    "feeStatus": "Unpaid",
     "registeredDate": "2025-12-14T05:09:27.554Z"
   },
   {
@@ -28,7 +28,47 @@
     "custID": 1,
     "eventID": 754,
     "ticketNum": 67248,
-    "feeStatus": "Pending",
+    "feeStatus": "Paid",
     "registeredDate": "2025-12-14T08:26:43.542Z"
+  },
+  {
+    "ID": 5,
+    "custID": 1,
+    "eventID": 329,
+    "ticketNum": 24738,
+    "feeStatus": "Unpaid",
+    "registeredDate": "2025-12-15T12:52:27.177Z"
+  },
+  {
+    "ID": 6,
+    "custID": 2,
+    "eventID": 329,
+    "ticketNum": 23037,
+    "feeStatus": "Paid",
+    "registeredDate": "2025-12-15T12:54:09.415Z"
+  },
+  {
+    "ID": 7,
+    "custID": 1,
+    "eventID": 902,
+    "ticketNum": 73187,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T14:51:10.463Z"
+  },
+  {
+    "ID": 8,
+    "custID": 1,
+    "eventID": 377,
+    "ticketNum": 89615,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T14:54:29.953Z"
+  },
+  {
+    "ID": 9,
+    "custID": 2,
+    "eventID": 671,
+    "ticketNum": 31818,
+    "feeStatus": "Paid",
+    "registeredDate": "2025-12-15T14:59:16.054Z"
   }
 ]
