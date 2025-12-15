@@ -1081,6 +1081,11 @@ async function openRegisterEvent() {
         return;
     }
     
+    // Clear previous input values
+    const registerForm = document.getElementById('register-event-form');
+    if (registerForm) registerForm.reset();
+    document.getElementById('register-event-id').value = '';
+    
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     

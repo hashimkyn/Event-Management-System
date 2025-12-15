@@ -34,14 +34,22 @@
   {
     "ID": 5,
     "custID": 1,
+<<<<<<< HEAD
     "eventID": 329,
     "ticketNum": 24738,
     "feeStatus": "Unpaid",
     "registeredDate": "2025-12-15T12:52:27.177Z"
+=======
+    "eventID": 970,
+    "ticketNum": 35350,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T12:50:13.158Z"
+>>>>>>> 308bfbbe7e16fd3973bbc8ce3107abf7c42a18bb
   },
   {
     "ID": 6,
     "custID": 2,
+<<<<<<< HEAD
     "eventID": 329,
     "ticketNum": 23037,
     "feeStatus": "Paid",
@@ -70,5 +78,27 @@
     "ticketNum": 31818,
     "feeStatus": "Paid",
     "registeredDate": "2025-12-15T14:59:16.054Z"
+=======
+    "eventID": 970,
+    "ticketNum": 79141,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T12:54:29.996Z"
+  },
+  {
+    "ID": 7,
+    "custID": 3,
+    "eventID": 970,
+    "ticketNum": 89455,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T12:55:23.097Z"
+  },
+  {
+    "ID": 8,
+    "custID": 3,
+    "eventID": 948,
+    "ticketNum": 24609,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T13:02:06.491Z"
+>>>>>>> 308bfbbe7e16fd3973bbc8ce3107abf7c42a18bb
   }
 ]
