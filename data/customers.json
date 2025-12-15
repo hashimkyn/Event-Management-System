@@ -12,5 +12,19 @@
     "email": "maisam@mail",
     "username": "maisam51",
     "password": "hello"
+  },
+  {
+    "ID": 3,
+    "name": "bilal nazeer",
+    "email": "bilal@mail",
+    "username": "bilal51",
+    "password": "hello"
+  },
+  {
+    "ID": 4,
+    "name": "manahel",
+    "email": "mana@mail",
+    "username": "manahel51",
+    "password": "hello"
   }
 ]

@@ -5,21 +5,9 @@
     "venue": "Jinnah Auditorium",
     "startDate": "2025-12-17",
     "endDate": "2025-12-19",
-    "totalSeats": 500,
-    "soldTickets": 2,
+    "totalSeats": 3,
+    "soldTickets": 3,
     "type": 1,
-    "orgID": 999,
-    "orgName": "uzair51"
-  },
-  {
-    "ID": 671,
-    "name": "Payam",
-    "venue": "Helipad Ground",
-    "startDate": "2025-12-17",
-    "endDate": "2025-12-19",
-    "totalSeats": 300,
-    "soldTickets": 1,
-    "type": 5,
     "orgID": 999,
     "orgName": "uzair51"
   },

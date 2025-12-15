@@ -771,6 +771,16 @@ class BackendBridge {
                 }
             }
             
+            // Check if event exists and has available seats
+            const event = events.find(e => e.ID === data.eventID);
+            if (!event) {
+                return { success: false, message: 'Event not found' };
+            }
+            
+            if (event.soldTickets >= event.totalSeats) {
+                return { success: false, message: 'All seats are filled for this event' };
+            }
+            
             // Check if already registered
             const alreadyRegistered = registrations.find(r => 
                 r.custID === data.custID && r.eventID === data.eventID
