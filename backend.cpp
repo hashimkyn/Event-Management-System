@@ -14,6 +14,9 @@ char VENDOR_FILE[] = "vendors.dat";
 
 // ========================== STRUCT DEFINITIONS ==========================
 enum EventType { MUN = 1, OLYMPIAD, SEMINAR, CEREMONY, FESTIVAL, CONCERT, CUSTOM };
+enum UserType { ORGANISER = 1, CUSTOMER = 2 };
+enum AuthChoice { SIGNUP = 1, LOGIN = 2 };
+enum EventMenuChoice { ADD_EVENT = 1, VIEW_EVENTS = 2, MODIFY_EVENT = 3, DELETE_EVENT = 4, EXIT_MENU = 0 };
 
 struct Organiser {
     int ID;
@@ -627,15 +630,15 @@ void updateFeeStatus(int custID, int eventID) {
 void organiserEventMenu() {
     int choice;
     while (cin >> choice) {
-        if (choice == 1) {
+        if (choice == ADD_EVENT) {
             addEvent();
-        } else if (choice == 2) {
+        } else if (choice == VIEW_EVENTS) {
             viewEvents();
-        } else if (choice == 3) {
+        } else if (choice == MODIFY_EVENT) {
             modifyEvent();
-        } else if (choice == 4) {
+        } else if (choice == DELETE_EVENT) {
             deleteEvent();
-        } else if (choice == 0) {
+        } else if (choice == EXIT_MENU) {
             break;
         }
     }
@@ -648,25 +651,25 @@ int main() {
     int userType;
     
     while (cin >> userType) {
-        if (userType == 1) {  // Organiser
+        if (userType == ORGANISER) {  // Organiser
             int choice;
             cin >> choice;
             
-            if (choice == 1) {
+            if (choice == SIGNUP) {
                 organiserSignup();
-            } else if (choice == 2) {
+            } else if (choice == LOGIN) {
                 organiserLogin();
                 // After successful login, handle organiser menu
                 organiserEventMenu();
             }
         } 
-        else if (userType == 2) {  // Customer
+        else if (userType == CUSTOMER) {  // Customer
             int choice;
             cin >> choice;
             
-            if (choice == 1) {
+            if (choice == SIGNUP) {
                 customerSignup();
-            } else if (choice == 2) {
+            } else if (choice == LOGIN) {
                 customerLogin();
             }
         }
