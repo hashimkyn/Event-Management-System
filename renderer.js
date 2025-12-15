@@ -1095,6 +1095,15 @@ async function openRegisterEvent() {
         }
 
         try {
+            // Validate event exists
+            const eventsResult = await window.api.eventGetAll();
+            const eventExists = eventsResult.success && eventsResult.events?.some(ev => ev.ID === eventID);
+            
+            if (!eventExists) {
+                showMessage('Event ID does not exist', 'error');
+                return;
+            }
+
             const res = await window.api.customerRegister({
                 custID: currentUser.ID,
                 eventID
