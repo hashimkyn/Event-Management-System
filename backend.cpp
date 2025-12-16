@@ -652,26 +652,36 @@ int main() {
     int userType;
     
     while (cin >> userType) {
-        if (userType == ORGANISER) {  // Organiser
-            int choice;
-            cin >> choice;
-            
-            if (choice == SIGNUP) {
-                organiserSignup();
-            } else if (choice == LOGIN) {
-                organiserLogin();
-                // After successful login, handle organiser menu
-                organiserEventMenu();
+        switch (userType) {
+            case ORGANISER: {  // Organiser
+                int choice;
+                cin >> choice;
+                
+                switch (choice) {
+                    case SIGNUP:
+                        organiserSignup();
+                        break;
+                    case LOGIN:
+                        organiserLogin();
+                        // After successful login, handle organiser menu
+                        organiserEventMenu();
+                        break;
+                }
+                break;
             }
-        } 
-        else if (userType == CUSTOMER) {  // Customer
-            int choice;
-            cin >> choice;
-            
-            if (choice == SIGNUP) {
-                customerSignup();
-            } else if (choice == LOGIN) {
-                customerLogin();
+            case CUSTOMER: {  // Customer
+                int choice;
+                cin >> choice;
+                
+                switch (choice) {
+                    case SIGNUP:
+                        customerSignup();
+                        break;
+                    case LOGIN:
+                        customerLogin();
+                        break;
+                }
+                break;
             }
         }
         
