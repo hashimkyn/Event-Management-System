@@ -12,12 +12,13 @@ char REG_FILE[] = "registrations.dat";
 char STAFF_FILE[] = "staff.dat";
 char VENDOR_FILE[] = "vendors.dat";
 
-// ========================== STRUCT DEFINITIONS ==========================
+// ========================== ENUM DEFINITIONS ==========================
 enum EventType { MUN = 1, OLYMPIAD, SEMINAR, CEREMONY, FESTIVAL, CONCERT, CUSTOM };
 enum UserType { ORGANISER = 1, CUSTOMER = 2 };
 enum AuthChoice { SIGNUP = 1, LOGIN = 2 };
 enum EventMenuChoice { ADD_EVENT = 1, VIEW_EVENTS = 2, MODIFY_EVENT = 3, DELETE_EVENT = 4, EXIT_MENU = 0 };
 
+// ========================== STRUCT DEFINITIONS ==========================
 struct Organiser {
     int ID;
     char name[50], email[50], username[20], password[20];
