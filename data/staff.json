@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "ID": 1,
+    "eventID": 948,
+    "name": "Hashim",
+    "email": "hashim@mail.com",
+    "team": "Marketing",
+    "position": "Director",
+    "createdDate": "2025-12-16T15:33:29.145Z"
+  }
+]
