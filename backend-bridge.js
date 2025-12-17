@@ -266,7 +266,11 @@ class BackendBridge {
                 '0'            // Exit (removed banking input)
             ];
 
-            await this.executeCommand(inputs);
+            const output = await this.executeCommand(inputs);
+            console.log('Organiser signup output:', output);
+
+            // Small delay to ensure file is written
+            await new Promise(resolve => setTimeout(resolve, 100));
 
             // Read from organisers.dat to get the registered organiser
             const allOrganisers = readAllFromDat('organisers.dat', parseOrganiser, ORGANISER_SIZE);
@@ -280,7 +284,15 @@ class BackendBridge {
                 };
             }
 
-            return { success: false, message: 'Username already exists' };
+            // If we still can't find it, check if the output mentions success
+            if (output.includes('registered successfully') || output.includes('Your ID:')) {
+                return { 
+                    success: true, 
+                    message: 'Organiser registered successfully!' 
+                };
+            }
+
+            return { success: false, message: 'Signup failed' };
         } catch (error) {
             console.error('organiserSignup error:', error);
             return { success: false, message: error.message };
@@ -326,12 +338,24 @@ class BackendBridge {
     // ======================= CUSTOMER FUNCTIONS =======================
     async customerSignup(data) {
         try {
+            console.log('Starting customer signup for:', data.username);
+            
             // Check if username already exists
             const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
-            if (customers && customers.some(c => c.username === data.username)) {
+            console.log('Existing customers:', customers);
+            console.log('Checking if username exists:', data.username);
+            
+            const usernameExists = customers && customers.length > 0 && customers.some(c => {
+                console.log('Comparing:', c.username, 'with', data.username, '=', c.username === data.username);
+                return c.username === data.username;
+            });
+            
+            if (usernameExists) {
+                console.log('Username already exists');
                 return { success: false, message: 'Username already exists' };
             }
 
+            console.log('Username is unique, proceeding with signup');
             const inputs = [
                 '2',           // Choose Customer
                 '1',           // Choose Signup
@@ -342,13 +366,20 @@ class BackendBridge {
                 '0'            // Exit
             ];
 
-            await this.executeCommand(inputs);
+            console.log('Customer signup inputs:', inputs);
+            const output = await this.executeCommand(inputs);
+            console.log('Customer signup output:', output);
+
+            // Small delay to ensure file is written
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             // Read from customers.dat to get the registered customer
             const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            console.log('All customers after signup:', allCustomers);
             const newCustomer = allCustomers.find(c => c.username === data.username);
 
             if (newCustomer) {
+                console.log('Found new customer:', newCustomer);
                 return { 
                     success: true, 
                     ID: newCustomer.ID, 
@@ -356,6 +387,16 @@ class BackendBridge {
                 };
             }
 
+            // If we still can't find it, check if the output mentions success
+            if (output.includes('registered successfully') || output.includes('Your ID:')) {
+                console.log('Backend confirmed success via output');
+                return { 
+                    success: true, 
+                    message: 'Customer registered successfully!' 
+                };
+            }
+
+            console.log('Customer signup failed - could not verify registration');
             return { success: false, message: 'Signup failed' };
         } catch (error) {
             console.error('customerSignup error:', error);
