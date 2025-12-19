@@ -70,5 +70,29 @@
     "ticketNum": 31818,
     "feeStatus": "Paid",
     "registeredDate": "2025-12-15T14:59:16.054Z"
+  },
+  {
+    "ID": 10,
+    "custID": 2,
+    "eventID": 970,
+    "ticketNum": 79141,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T12:54:29.996Z"
+  },
+  {
+    "ID": 11,
+    "custID": 3,
+    "eventID": 970,
+    "ticketNum": 89455,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T12:55:23.097Z"
+  },
+  {
+    "ID": 12,
+    "custID": 3,
+    "eventID": 948,
+    "ticketNum": 24609,
+    "feeStatus": "Pending",
+    "registeredDate": "2025-12-15T13:02:06.491Z"
   }
 ]
