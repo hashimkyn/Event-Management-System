@@ -12,8 +12,8 @@ if (!fs.existsSync(DATA_DIR)) {
 
 // ======================= BINARY FILE PARSING =======================
 // Struct sizes based on backend.cpp
-const ORGANISER_SIZE = 140; // 4 + 50 + 50 + 20 + 20
-const CUSTOMER_SIZE = 140;  // 4 + 50 + 50 + 20 + 20
+const ORGANISER_SIZE = 144; // 4 + 50 + 50 + 20 + 20
+const CUSTOMER_SIZE = 144;  // 4 + 50 + 50 + 20 + 20
 const EVENT_SIZE = 216;     // 4 + 4 + 50 + 50 + 50 + 20 + 20 + 4 + 4 + 4
 const STAFF_SIZE = 136;     // 4 + 4 + 50 + 50 + 20 + 20
 const VENDOR_SIZE = 132;    // 4 + 4 + 50 + 50 + 50 + 4
@@ -388,11 +388,11 @@ class BackendBridge {
             console.log('Starting customer signup for:', data.username);
             
             // Check if username already exists
-            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE) || [];
             console.log('Existing customers:', customers);
             console.log('Checking if username exists:', data.username);
             
-            const usernameExists = customers && customers.length > 0 && customers.some(c => {
+            const usernameExists = customers.length > 0 && customers.some(c => {
                 console.log('Comparing:', c.username, 'with', data.username, '=', c.username === data.username);
                 return c.username === data.username;
             });
@@ -418,12 +418,16 @@ class BackendBridge {
             console.log('Customer signup output:', output);
 
             // Small delay to ensure file is written
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Read from customers.dat to get the registered customer
-            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE) || [];
             console.log('All customers after signup:', allCustomers);
-            const newCustomer = allCustomers.find(c => c.username === data.username);
+            console.log('Looking for username:', data.username);
+            const newCustomer = allCustomers.find(c => {
+                console.log('Checking customer:', c.username, 'ID:', c.ID);
+                return c.username === data.username;
+            });
 
             if (newCustomer) {
                 console.log('Found new customer:', newCustomer);
@@ -434,17 +438,9 @@ class BackendBridge {
                 };
             }
 
-            // If we still can't find it, check if the output mentions success
-            if (output.includes('registered successfully') || output.includes('Your ID:')) {
-                console.log('Backend confirmed success via output');
-                return { 
-                    success: true, 
-                    message: 'Customer registered successfully!' 
-                };
-            }
-
-            console.log('Customer signup failed - could not verify registration');
-            return { success: false, message: 'Signup failed' };
+            console.log('Customer NOT found in file after signup');
+            console.log('Backend output was:', output);
+            return { success: false, message: 'Signup failed - customer not written to database' };
         } catch (error) {
             console.error('customerSignup error:', error);
             return { success: false, message: error.message };
@@ -981,45 +977,6 @@ class BackendBridge {
             return { success: false, message: output || 'Failed to update fee status' };
         } catch (error) {
             console.error('updateCustomerFeeStatus error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async customerSignup(data) {
-        try {
-            // Check if username already exists
-            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
-            if (customers && customers.some(c => c.username === data.username)) {
-                return { success: false, message: 'Username already exists' };
-            }
-
-            const inputs = [
-                '2',           // Choose Customer
-                '1',           // Choose Signup
-                data.name,
-                data.email,
-                data.username,
-                data.password,
-                '0'            // Exit
-            ];
-
-            await this.executeCommand(inputs);
-
-            // Read from customers.dat to get the registered customer
-            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
-            const newCustomer = allCustomers.find(c => c.username === data.username);
-
-            if (newCustomer) {
-                return { 
-                    success: true, 
-                    ID: newCustomer.ID, 
-                    message: 'Customer registered successfully!' 
-                };
-            }
-
-            return { success: false, message: 'Username already exists' };
-        } catch (error) {
-            console.error('customerSignup error:', error);
             return { success: false, message: error.message };
         }
     }
