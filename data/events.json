@@ -10,5 +10,17 @@
     "type": 1,
     "orgID": 999,
     "orgName": "uzair51"
+  },
+  {
+    "ID": 968,
+    "name": "Nust Olympiad",
+    "venue": "Sports Complex",
+    "startDate": "2025-12-22",
+    "endDate": "2025-12-23",
+    "totalSeats": 1400,
+    "soldTickets": 0,
+    "type": 2,
+    "orgID": 999,
+    "orgName": "uzair51"
   }
 ]

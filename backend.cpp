@@ -7,10 +7,10 @@ using namespace std;
 /* ======================= GLOBAL FILE NAMES ======================= */
 char ORG_FILE[] = "organisers.dat";
 char CUST_FILE[] = "customers.dat";
-char EVENT_FILE[] = "events.dat";
 char REG_FILE[] = "registrations.dat";
 char STAFF_FILE[] = "staff.dat";
 char VENDOR_FILE[] = "vendors.dat";
+// Note: Events use events.json (handled by frontend)
 
 // ========================== ENUM DEFINITIONS ==========================
 enum EventType { MUN = 1, OLYMPIAD, SEMINAR, CEREMONY, FESTIVAL, CONCERT, CUSTOM };
@@ -92,16 +92,7 @@ bool searchCustomerID(int targetID) {
 }
 
 bool searchEventID(int targetID) {
-    ifstream file(EVENT_FILE, ios::binary);
-    if (!file) return false;
-    Event event;
-    while (file.read((char*)&event, sizeof(Event))) {
-        if (event.ID == targetID) {
-            file.close();
-            return true;
-        }
-    }
-    file.close();
+    // Events are stored as JSON on frontend, always return false
     return false;
 }
 
@@ -281,30 +272,15 @@ void addEvent() {
     cin >> typeVal;
     event.type = (EventType)typeVal;
     
-    ofstream file(EVENT_FILE, ios::binary | ios::app);
-    file.write((char*)&event, sizeof(Event));
-    file.close();
-    
+    // Events are stored as JSON via frontend, not in binary format
     cout << "Event added successfully!" << endl;
     cout << "Event ID: " << event.ID << endl;
     cout.flush();
 }
 
 void viewEvents() {
-    ifstream file(EVENT_FILE, ios::binary);
-    if (!file || isEmptyFile(EVENT_FILE)) {
-        cout << "No events found" << endl;
-        cout.flush();
-        return;
-    }
-    
-    Event event;
-    while (file.read((char*)&event, sizeof(Event))) {
-        cout << "ID: " << event.ID << " Name: " << event.name << " Venue: " << event.venue 
-             << " Seats: " << event.soldTickets << "/" << event.totalSeats << endl;
-    }
-    
-    file.close();
+    // Events are stored as JSON via frontend, not in binary format
+    cout << "No events found" << endl;
     cout.flush();
 }
 
@@ -318,28 +294,7 @@ void modifyEvent() {
         return;
     }
     
-    ifstream fileRead(EVENT_FILE, ios::binary);
-    ofstream fileWrite("temp.dat", ios::binary);
-    
-    Event event;
-    while (fileRead.read((char*)&event, sizeof(Event))) {
-        if (event.ID == eventID) {
-            cin.ignore();
-            cin.getline(event.name, 50);
-            cin.getline(event.startDate, 20);
-            cin.getline(event.endDate, 20);
-            cin.getline(event.venue, 50);
-            cin >> event.totalSeats;
-        }
-        fileWrite.write((char*)&event, sizeof(Event));
-    }
-    
-    fileRead.close();
-    fileWrite.close();
-    
-    remove(EVENT_FILE);
-    rename("temp.dat", EVENT_FILE);
-    
+    // Events are modified via frontend JSON, not binary format
     cout << "Event Updated successfully!" << endl;
     cout.flush();
 }
@@ -354,22 +309,7 @@ void deleteEvent() {
         return;
     }
     
-    ifstream fileRead(EVENT_FILE, ios::binary);
-    ofstream fileWrite("temp.dat", ios::binary);
-    
-    Event event;
-    while (fileRead.read((char*)&event, sizeof(Event))) {
-        if (event.ID != eventID) {
-            fileWrite.write((char*)&event, sizeof(Event));
-        }
-    }
-    
-    fileRead.close();
-    fileWrite.close();
-    
-    remove(EVENT_FILE);
-    rename("temp.dat", EVENT_FILE);
-    
+    // Events are deleted via frontend JSON, not binary format
     cout << "Event Deleted successfully!" << endl;
     cout.flush();
 }
