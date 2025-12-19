@@ -533,56 +533,53 @@ void deleteVendor() {
 }
 
 /* ======================= REGISTRATION FUNCTIONS ======================= */
-void registerCustomer(int custID, int eventID) {
-    if (searchRegistration(eventID, custID)) {
-        cout << "Already Registered! Your ticket number is stored in system" << endl;
+void addRegistration() {
+    Registration reg;
+    
+    cin >> reg.customerID;
+    cin >> reg.eventID;
+    cin >> reg.ticketNum;
+    cin.ignore();
+    cin.getline(reg.feeStatus, 10);
+    
+    ofstream file(REG_FILE, ios::binary | ios::app);
+    file.write((char*)&reg, sizeof(Registration));
+    file.close();
+    
+    cout << "Registration added successfully!" << endl;
+    cout.flush();
+}
+
+void getRegistrationsByCustomer() {
+    int custID;
+    cin >> custID;
+    
+    ifstream file(REG_FILE, ios::binary);
+    if (!file) {
+        cout << "No registrations found" << endl;
         cout.flush();
         return;
     }
     
     Registration reg;
-    reg.customerID = custID;
-    reg.eventID = eventID;
-    
-    ifstream file(REG_FILE, ios::binary);
-    int maxTicket = 0;
-    Registration tempReg;
-    while (file.read((char*)&tempReg, sizeof(Registration))) {
-        if (tempReg.ticketNum > maxTicket) {
-            maxTicket = tempReg.ticketNum;
+    bool found = false;
+    while (file.read((char*)&reg, sizeof(Registration))) {
+        if (reg.customerID == custID) {
+            cout << "ID: " << reg.customerID << " EventID: " << reg.eventID 
+                 << " Ticket: " << reg.ticketNum << " Status: " << reg.feeStatus << endl;
+            found = true;
         }
     }
+    
     file.close();
-    
-    reg.ticketNum = maxTicket + 1;
-    strcpy(reg.feeStatus, "Unpaid");
-    
-    ofstream outfile(REG_FILE, ios::binary | ios::app);
-    outfile.write((char*)&reg, sizeof(Registration));
-    outfile.close();
-    
-    ifstream eventFile(EVENT_FILE, ios::binary);
-    ofstream tempFile("temp.dat", ios::binary);
-    
-    Event event;
-    while (eventFile.read((char*)&event, sizeof(Event))) {
-        if (event.ID == eventID) {
-            event.soldTickets++;
-        }
-        tempFile.write((char*)&event, sizeof(Event));
-    }
-    
-    eventFile.close();
-    tempFile.close();
-    
-    remove(EVENT_FILE);
-    rename("temp.dat", EVENT_FILE);
-    
-    cout << "Registered successfully! Your ticket number is " << reg.ticketNum << endl;
+    if (!found) cout << "No registrations found for this customer" << endl;
     cout.flush();
 }
 
-void viewCustomersForEvent(int eventID) {
+void getRegistrationsByEvent() {
+    int eventID;
+    cin >> eventID;
+    
     ifstream file(REG_FILE, ios::binary);
     if (!file) {
         cout << "No registrations found" << endl;
@@ -594,25 +591,60 @@ void viewCustomersForEvent(int eventID) {
     bool found = false;
     while (file.read((char*)&reg, sizeof(Registration))) {
         if (reg.eventID == eventID) {
-            cout << "ID: " << reg.customerID << " Ticket Number: " << reg.ticketNum 
-                 << " Fee Status: " << reg.feeStatus << endl;
+            // Look up customer details from customers.dat
+            ifstream custFile(CUST_FILE, ios::binary);
+            Customer cust;
+            char custName[50] = "Unknown";
+            char custEmail[50] = "unknown@email.com";
+            bool customerFound = false;
+            
+            while (custFile.read((char*)&cust, sizeof(Customer))) {
+                if (cust.ID == reg.customerID) {
+                    strcpy(custName, cust.name);
+                    strcpy(custEmail, cust.email);
+                    customerFound = true;
+                    break;
+                }
+            }
+            custFile.close();
+            
+            // Debug output
+            cerr << "DEBUG: Lookup for custID " << reg.customerID << ", found: " << (customerFound ? "YES" : "NO") << ", name: " << custName << ", email: " << custEmail << endl;
+            
+            cout << "CustID: " << reg.customerID << " Name: " << custName << " Email: " << custEmail 
+                 << " Ticket: " << reg.ticketNum << " Status: " << reg.feeStatus << endl;
             found = true;
         }
     }
     
     file.close();
-    if (!found) cout << "No customers registered for this event" << endl;
+    if (!found) cout << "No registrations found for this event" << endl;
     cout.flush();
 }
 
-void updateFeeStatus(int custID, int eventID) {
+void updateRegistrationFeeStatus() {
+    int custID, eventID;
+    char feeStatus[10];
+    
+    cin >> custID >> eventID;
+    cin.ignore();
+    cin.getline(feeStatus, 10);
+    
+    cerr << "DEBUG updateRegistrationFeeStatus: custID=" << custID << ", eventID=" << eventID << ", feeStatus=" << feeStatus << endl;
+    
     ifstream fileRead(REG_FILE, ios::binary);
     ofstream fileWrite("temp.dat", ios::binary);
     
     Registration reg;
+    bool found = false;
+    int totalRegs = 0;
     while (fileRead.read((char*)&reg, sizeof(Registration))) {
+        totalRegs++;
+        cerr << "DEBUG: Checking reg - custID=" << reg.customerID << ", eventID=" << reg.eventID << endl;
         if (reg.customerID == custID && reg.eventID == eventID) {
-            strcpy(reg.feeStatus, "Paid");
+            strcpy(reg.feeStatus, feeStatus);
+            found = true;
+            cerr << "DEBUG: Found matching registration, updating feeStatus to " << feeStatus << endl;
         }
         fileWrite.write((char*)&reg, sizeof(Registration));
     }
@@ -620,10 +652,263 @@ void updateFeeStatus(int custID, int eventID) {
     fileRead.close();
     fileWrite.close();
     
-    remove(REG_FILE);
-    rename("temp.dat", REG_FILE);
+    cerr << "DEBUG: Total regs checked: " << totalRegs << ", found: " << (found ? "YES" : "NO") << endl;
     
-    cout << "Fee Status Updated successfully!" << endl;
+    if (found) {
+        remove(REG_FILE);
+        rename("temp.dat", REG_FILE);
+        cout << "Fee Status Updated successfully!" << endl;
+    } else {
+        remove("temp.dat");
+        cout << "Registration not found" << endl;
+    }
+    cout.flush();
+}
+
+/* ======================= STAFF FUNCTIONS ======================= */
+void addStaffToFile() {
+    Staff staff;
+    
+    int newID;
+    do {
+        newID = (rand() % 900) + 100;
+    } while (searchStaffID(newID));
+    
+    staff.ID = newID;
+    cin >> staff.eventID;
+    cin.ignore();
+    cin.getline(staff.name, 50);
+    cin.getline(staff.email, 50);
+    cin.getline(staff.team, 20);
+    cin.getline(staff.position, 20);
+    
+    ofstream file(STAFF_FILE, ios::binary | ios::app);
+    file.write((char*)&staff, sizeof(Staff));
+    file.close();
+    
+    cout << "Staff member added successfully!" << endl;
+    cout << "Staff ID: " << staff.ID << endl;
+    cout.flush();
+}
+
+void getStaffByEventFile() {
+    int eventID;
+    cin >> eventID;
+    
+    ifstream file(STAFF_FILE, ios::binary);
+    if (!file) {
+        cout << "No staff found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    Staff staff;
+    bool found = false;
+    while (file.read((char*)&staff, sizeof(Staff))) {
+        if (staff.eventID == eventID) {
+            cout << "ID: " << staff.ID << " Name: " << staff.name << " Email: " << staff.email 
+                 << " Team: " << staff.team << " Position: " << staff.position << endl;
+            found = true;
+        }
+    }
+    
+    file.close();
+    if (!found) cout << "No staff found for this event" << endl;
+    cout.flush();
+}
+
+void deleteStaffFromFile() {
+    int staffID;
+    cin >> staffID;
+    
+    if (!searchStaffID(staffID)) {
+        cout << "Staff not found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    ifstream fileRead(STAFF_FILE, ios::binary);
+    ofstream fileWrite("temp.dat", ios::binary);
+    
+    Staff staff;
+    while (fileRead.read((char*)&staff, sizeof(Staff))) {
+        if (staff.ID != staffID) {
+            fileWrite.write((char*)&staff, sizeof(Staff));
+        }
+    }
+    
+    fileRead.close();
+    fileWrite.close();
+    
+    remove(STAFF_FILE);
+    rename("temp.dat", STAFF_FILE);
+    
+    cout << "Staff Deleted successfully!" << endl;
+    cout.flush();
+}
+
+void updateStaffInFile() {
+    int staffID;
+    cin >> staffID;
+    
+    if (!searchStaffID(staffID)) {
+        cout << "Staff not found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    char name[50], email[50], team[20], position[20];
+    cin.ignore();
+    cin.getline(name, 50);
+    cin.getline(email, 50);
+    cin.getline(team, 20);
+    cin.getline(position, 20);
+    
+    ifstream fileRead(STAFF_FILE, ios::binary);
+    ofstream fileWrite("temp.dat", ios::binary);
+    
+    Staff staff;
+    while (fileRead.read((char*)&staff, sizeof(Staff))) {
+        if (staff.ID == staffID) {
+            strcpy(staff.name, name);
+            strcpy(staff.email, email);
+            strcpy(staff.team, team);
+            strcpy(staff.position, position);
+        }
+        fileWrite.write((char*)&staff, sizeof(Staff));
+    }
+    
+    fileRead.close();
+    fileWrite.close();
+    
+    remove(STAFF_FILE);
+    rename("temp.dat", STAFF_FILE);
+    
+    cout << "Staff Updated successfully!" << endl;
+    cout.flush();
+}
+
+/* ======================= VENDOR FUNCTIONS ======================= */
+void addVendorToFile() {
+    Vendor vendor;
+    
+    int newID;
+    do {
+        newID = (rand() % 900) + 100;
+    } while (searchVendorID(newID));
+    
+    vendor.ID = newID;
+    cin >> vendor.eventID;
+    cin.ignore();
+    cin.getline(vendor.name, 50);
+    cin.getline(vendor.email, 50);
+    cin.getline(vendor.prod_serv, 50);
+    cin >> vendor.chargesDue;
+    
+    ofstream file(VENDOR_FILE, ios::binary | ios::app);
+    file.write((char*)&vendor, sizeof(Vendor));
+    file.close();
+    
+    cout << "Vendor added successfully!" << endl;
+    cout << "Vendor ID: " << vendor.ID << endl;
+    cout.flush();
+}
+
+void getVendorsByEventFile() {
+    int eventID;
+    cin >> eventID;
+    
+    ifstream file(VENDOR_FILE, ios::binary);
+    if (!file) {
+        cout << "No vendors found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    Vendor vendor;
+    bool found = false;
+    while (file.read((char*)&vendor, sizeof(Vendor))) {
+        if (vendor.eventID == eventID) {
+            cout << "ID: " << vendor.ID << " Name: " << vendor.name << " Email: " << vendor.email 
+                 << " Product/Service: " << vendor.prod_serv << " Charges: " << vendor.chargesDue << endl;
+            found = true;
+        }
+    }
+    
+    file.close();
+    if (!found) cout << "No vendors found for this event" << endl;
+    cout.flush();
+}
+
+void deleteVendorFromFile() {
+    int vendorID;
+    cin >> vendorID;
+    
+    if (!searchVendorID(vendorID)) {
+        cout << "Vendor not found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    ifstream fileRead(VENDOR_FILE, ios::binary);
+    ofstream fileWrite("temp.dat", ios::binary);
+    
+    Vendor vendor;
+    while (fileRead.read((char*)&vendor, sizeof(Vendor))) {
+        if (vendor.ID != vendorID) {
+            fileWrite.write((char*)&vendor, sizeof(Vendor));
+        }
+    }
+    
+    fileRead.close();
+    fileWrite.close();
+    
+    remove(VENDOR_FILE);
+    rename("temp.dat", VENDOR_FILE);
+    
+    cout << "Vendor Deleted successfully!" << endl;
+    cout.flush();
+}
+
+void updateVendorInFile() {
+    int vendorID;
+    cin >> vendorID;
+    
+    if (!searchVendorID(vendorID)) {
+        cout << "Vendor not found" << endl;
+        cout.flush();
+        return;
+    }
+    
+    char name[50], email[50], prod_serv[50];
+    float chargesDue;
+    cin.ignore();
+    cin.getline(name, 50);
+    cin.getline(email, 50);
+    cin.getline(prod_serv, 50);
+    cin >> chargesDue;
+    
+    ifstream fileRead(VENDOR_FILE, ios::binary);
+    ofstream fileWrite("temp.dat", ios::binary);
+    
+    Vendor vendor;
+    while (fileRead.read((char*)&vendor, sizeof(Vendor))) {
+        if (vendor.ID == vendorID) {
+            strcpy(vendor.name, name);
+            strcpy(vendor.email, email);
+            strcpy(vendor.prod_serv, prod_serv);
+            vendor.chargesDue = chargesDue;
+        }
+        fileWrite.write((char*)&vendor, sizeof(Vendor));
+    }
+    
+    fileRead.close();
+    fileWrite.close();
+    
+    remove(VENDOR_FILE);
+    rename("temp.dat", VENDOR_FILE);
+    
+    cout << "Vendor Updated successfully!" << endl;
     cout.flush();
 }
 
@@ -652,6 +937,56 @@ int main() {
     int userType;
     
     while (cin >> userType) {
+        // Handle operation codes 10+ (registrations, staff, vendors)
+        if (userType >= 10) {
+            int operation = userType;
+            switch (operation) {
+                case 10:  // Get registrations by event
+                    getRegistrationsByEvent();
+                    break;
+                case 11:  // Update registration fee status
+                    updateRegistrationFeeStatus();
+                    break;
+                case 12:  // Add registration
+                    addRegistration();
+                    break;
+                case 13:  // Add staff
+                    addStaffToFile();
+                    break;
+                case 14:  // Get staff by event
+                    getStaffByEventFile();
+                    break;
+                case 15:  // Delete staff
+                    deleteStaffFromFile();
+                    break;
+                case 16:  // Add vendor
+                    addVendorToFile();
+                    break;
+                case 17:  // Get vendors by event
+                    getVendorsByEventFile();
+                    break;
+                case 18:  // Delete vendor
+                    deleteVendorFromFile();
+                    break;
+                case 19:  // Update staff
+                    updateStaffInFile();
+                    break;
+                case 20:  // Update vendor
+                    updateVendorInFile();
+                    break;
+            }
+            
+            // Read exit signal
+            int exitChoice;
+            if (!(cin >> exitChoice)) {
+                break;
+            }
+            if (exitChoice == 0) {
+                break;
+            }
+            continue;
+        }
+        
         switch (userType) {
             case ORGANISER: {  // Organiser
                 int choice;

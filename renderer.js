@@ -625,7 +625,7 @@ async function showCustomerDataPage() {
                     <td>${reg.ticketNum}</td>
                     <td><strong>${reg.feeStatus}</strong></td>
                     <td>
-                        <button data-reg-id="${reg.ID}" class="toggle-fee-btn">Mark as ${toggleStatus}</button>
+                        <button data-cust-id="${reg.customerID}" data-event-id="${currentEventDetail.ID}" class="toggle-fee-btn">Mark as ${toggleStatus}</button>
                     </td>
                 </tr>`;
             });
@@ -642,8 +642,9 @@ async function showCustomerDataPage() {
         // Add event delegation for fee toggle
         detailsMenu.addEventListener('click', async (e) => {
             if (e.target.classList.contains('toggle-fee-btn')) {
-                const regID = parseInt(e.target.dataset.regId);
-                const reg = registrationsData.find(r => r.ID === regID);
+                const custID = parseInt(e.target.dataset.custId);
+                const eventID = parseInt(e.target.dataset.eventId);
+                const reg = registrationsData.find(r => r.customerID === custID);
                 
                 if (!reg) {
                     showMessage('Registration not found', 'error');
@@ -654,7 +655,8 @@ async function showCustomerDataPage() {
                 
                 try {
                     const updateRes = await window.api.updateCustomerFeeStatus({
-                        registrationID: regID,
+                        custID: custID,
+                        eventID: eventID,
                         feeStatus: newStatus
                     });
                     

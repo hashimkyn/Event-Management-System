@@ -1,37 +1,13 @@
 [
   {
-    "ID": 948,
+    "ID": 571,
     "name": "NIMUN",
-    "venue": "Jinnah Auditorium",
-    "startDate": "2025-12-17",
-    "endDate": "2025-12-19",
-    "totalSeats": 3,
-    "soldTickets": 3,
-    "type": 1,
-    "orgID": 999,
-    "orgName": "uzair51"
-  },
-  {
-    "ID": 671,
-    "name": "Payam",
     "venue": "Helipad Ground",
-    "startDate": "2025-12-17",
-    "endDate": "2025-12-19",
-    "totalSeats": 300,
-    "soldTickets": 2,
-    "type": 5,
-    "orgID": 999,
-    "orgName": "uzair51"
-  },
-  {
-    "ID": 754,
-    "name": "Nust Olympiad",
-    "venue": "Poora NUST",
-    "startDate": "2025-12-15",
-    "endDate": "2025-12-18",
-    "totalSeats": 500,
+    "startDate": "2025-12-20",
+    "endDate": "2025-12-23",
+    "totalSeats": 700,
     "soldTickets": 1,
-    "type": 2,
+    "type": 1,
     "orgID": 999,
     "orgName": "uzair51"
   }

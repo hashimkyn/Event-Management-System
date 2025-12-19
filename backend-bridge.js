@@ -103,6 +103,53 @@ function parseRegistration(buffer) {
     };
 }
 
+// ======================= BINARY FILE WRITING FUNCTIONS =======================
+function writeNullTerminatedString(buffer, offset, str, maxLen) {
+    const bytes = Buffer.from(str, 'utf8');
+    bytes.copy(buffer, offset, 0, Math.min(bytes.length, maxLen - 1));
+    buffer[offset + Math.min(bytes.length, maxLen - 1)] = 0;
+}
+
+function writeRegistrationToDat(registration) {
+    const filepath = path.join(DATA_DIR, 'registrations.dat');
+    const buffer = Buffer.alloc(REGISTRATION_SIZE);
+    
+    buffer.writeInt32LE(registration.customerID, 0);
+    buffer.writeInt32LE(registration.eventID, 4);
+    buffer.writeInt32LE(registration.ticketNum, 8);
+    writeNullTerminatedString(buffer, 12, registration.feeStatus, 10);
+    
+    fs.appendFileSync(filepath, buffer);
+}
+
+function writeStaffToDat(staff) {
+    const filepath = path.join(DATA_DIR, 'staff.dat');
+    const buffer = Buffer.alloc(STAFF_SIZE);
+    
+    buffer.writeInt32LE(staff.ID, 0);
+    buffer.writeInt32LE(staff.eventID, 4);
+    writeNullTerminatedString(buffer, 8, staff.name, 50);
+    writeNullTerminatedString(buffer, 58, staff.email, 50);
+    writeNullTerminatedString(buffer, 108, staff.team, 20);
+    writeNullTerminatedString(buffer, 128, staff.position, 20);
+    
+    fs.appendFileSync(filepath, buffer);
+}
+
+function writeVendorToDat(vendor) {
+    const filepath = path.join(DATA_DIR, 'vendors.dat');
+    const buffer = Buffer.alloc(VENDOR_SIZE);
+    
+    buffer.writeInt32LE(vendor.ID, 0);
+    buffer.writeInt32LE(vendor.eventID, 4);
+    writeNullTerminatedString(buffer, 8, vendor.name, 50);
+    writeNullTerminatedString(buffer, 58, vendor.email, 50);
+    writeNullTerminatedString(buffer, 108, vendor.prod_serv, 50);
+    buffer.writeFloatLE(vendor.chargesDue, 128);
+    
+    fs.appendFileSync(filepath, buffer);
+}
+
 // ======================= FILE READING FUNCTIONS =======================
 function readAllFromDat(filename, parseFunc, size) {
     const filepath = path.join(DATA_DIR, filename);
@@ -592,24 +639,17 @@ class BackendBridge {
     async addStaff(data) {
         try {
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
+                '13',                       // Operation: Add staff
                 data.eventID.toString(),
-                '1',                    // Staff data
-                '3',                    // Add staff
                 data.name,
                 data.email,
                 data.team,
                 data.position,
-                '0'                     // Exit
+                '0'                         // Exit
             ];
 
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Backend staff output:', output);
 
             return { success: true, message: 'Staff member added successfully!' };
         } catch (error) {
@@ -620,35 +660,33 @@ class BackendBridge {
     async getStaffByEvent(eventID) {
         try {
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
+                '14',                       // Operation: Get staff by event
                 eventID.toString(),
-                '1',                    // Staff data
-                '1',                    // View staff
-                '0'                     // Exit
+                '0'                         // Exit
             ];
 
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Backend staff output:', output);
 
             const staff = [];
             const lines = output.split('\n');
 
             lines.forEach(line => {
+                line = line.trim();
                 if (line.includes('ID:') && line.includes('Name:')) {
                     const idMatch = line.match(/ID:\s*(\d+)/);
-                    const nameMatch = line.match(/Name:\s*([^\s]+)/);
-                    const emailMatch = line.match(/Email:\s*([^\s]+)/);
+                    const nameMatch = line.match(/Name:\s*(.+?)(?:\s+Email:|$)/);
+                    const emailMatch = line.match(/Email:\s*(.+?)(?:\s+Team:|$)/);
+                    const teamMatch = line.match(/Team:\s*(.+?)(?:\s+Position:|$)/);
+                    const positionMatch = line.match(/Position:\s*(.+?)(?:\s*$)/);
 
                     if (idMatch) {
                         staff.push({
                             ID: parseInt(idMatch[1]),
-                            name: nameMatch ? nameMatch[1] : 'Unknown',
-                            email: emailMatch ? emailMatch[1] : 'N/A',
+                            name: nameMatch ? nameMatch[1].trim() : 'Unknown',
+                            email: emailMatch ? emailMatch[1].trim() : 'N/A',
+                            team: teamMatch ? teamMatch[1].trim() : 'N/A',
+                            position: positionMatch ? positionMatch[1].trim() : 'N/A',
                             eventID: eventID
                         });
                     }
@@ -664,25 +702,13 @@ class BackendBridge {
     async staffDelete(staffID) {
         try {
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
-                '1',                    // (placeholder event ID)
-                '1',                    // Staff data
-                '4',                    // Delete staff
+                '15',                       // Operation: Delete staff
                 staffID.toString(),
-                '0'                     // Exit
+                '0'                         // Exit
             ];
 
             const output = await this.executeCommand(inputs);
             console.log('Backend output:', output);
-
-            if (output.includes('Deleted')) {
-                return { success: true, message: 'Staff deleted!' };
-            }
 
             return { success: true, message: 'Staff deleted!' };
         } catch (error) {
@@ -694,15 +720,8 @@ class BackendBridge {
     async addVendor(data) {
         try {
             const inputs = [
-                '1',                        // Organiser
-                '2',                        // Login
-                'temp_user',
-                'temp_pass',
-                '0',                        // Continue
-                '5',                        // Event details
+                '16',                       // Operation: Add vendor
                 data.eventID.toString(),
-                '2',                        // Vendor data
-                '3',                        // Add vendor
                 data.name,
                 data.email,
                 data.prod_serv,
@@ -710,11 +729,17 @@ class BackendBridge {
                 '0'                         // Exit
             ];
 
+            console.log('addVendor inputs:', inputs);
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Backend vendor output:', output);
 
-            return { success: true, message: 'Vendor added successfully!' };
+            if (output.includes('added successfully')) {
+                return { success: true, message: 'Vendor added successfully!' };
+            }
+
+            return { success: false, message: output || 'Failed to add vendor' };
         } catch (error) {
+            console.error('addVendor error:', error);
             return { success: false, message: error.message };
         }
     }
@@ -722,20 +747,13 @@ class BackendBridge {
     async getVendorsByEvent(eventID) {
         try {
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
+                '17',                       // Operation: Get vendors by event
                 eventID.toString(),
-                '2',                    // Vendor data
-                '1',                    // View vendors
-                '0'                     // Exit
+                '0'                         // Exit
             ];
 
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Backend vendor output:', output);
 
             const vendors = [];
             const lines = output.split('\n');
@@ -743,14 +761,18 @@ class BackendBridge {
             lines.forEach(line => {
                 if (line.includes('ID:') && line.includes('Name:')) {
                     const idMatch = line.match(/ID:\s*(\d+)/);
-                    const nameMatch = line.match(/Name:\s*([^\s]+)/);
-                    const emailMatch = line.match(/Email:\s*([^\s]+)/);
+                    const nameMatch = line.match(/Name:\s*(.+?)(?:\s+Email:|$)/);
+                    const emailMatch = line.match(/Email:\s*(.+?)(?:\s+Product\/Service:|$)/);
+                    const prodMatch = line.match(/Product\/Service:\s*(.+?)(?:\s+Charges:|$)/);
+                    const chargesMatch = line.match(/Charges:\s*(\d+)/);
 
                     if (idMatch) {
                         vendors.push({
                             ID: parseInt(idMatch[1]),
-                            name: nameMatch ? nameMatch[1] : 'Unknown',
-                            email: emailMatch ? emailMatch[1] : 'N/A',
+                            name: nameMatch ? nameMatch[1].trim() : 'Unknown',
+                            email: emailMatch ? emailMatch[1].trim() : 'N/A',
+                            prod_serv: prodMatch ? prodMatch[1].trim() : 'N/A',
+                            chargesDue: chargesMatch ? parseInt(chargesMatch[1]) : 0,
                             eventID: eventID
                         });
                     }
@@ -766,589 +788,85 @@ class BackendBridge {
     async vendorDelete(vendorID) {
         try {
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
-                '1',                    // (placeholder)
-                '2',                    // Vendor data
-                '4',                    // Delete vendor
+                '18',                       // Operation: Delete vendor
                 vendorID.toString(),
-                '0'                     // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
-
-            if (output.includes('Deleted')) {
-                return { success: true, message: 'Vendor deleted!' };
-            }
-
-            return { success: true, message: 'Vendor deleted!' };
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    }
-
-    // ======================= REGISTRATION FUNCTIONS =======================
-    async registerForEvent(data) {
-        try {
-            const inputs = [
-                '2',                        // Customer
-                '2',                        // Login
-                'temp_user',
-                'temp_pass',
-                '0',                        // Continue
-                '2',                        // Register
-                data.eventID.toString(),
                 '0'                         // Exit
             ];
 
             const output = await this.executeCommand(inputs);
             console.log('Backend output:', output);
 
-            const ticketMatch = output.match(/ticket number is\s*(\d+)/i);
-
-            if (output.includes('Already Registered')) {
-                const prevTicket = output.match(/ticket number is\s*(\d+)/i);
-                return {
-                    success: false,
-                    message: `Already registered! Ticket: ${prevTicket ? prevTicket[1] : 'N/A'}`
-                };
-            }
-
-            if (output.includes('successfully') || ticketMatch) {
-                return {
-                    success: true,
-                    ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
-                    message: 'Registered successfully!'
-                };
-            }
-
-            return { success: false, message: 'Registration failed' };
+            return { success: true, message: 'Vendor deleted!' };
         } catch (error) {
             return { success: false, message: error.message };
         }
     }
 
-    async getRegistrationsByEvent(eventID) {
-        try {
-            const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
-                eventID.toString(),
-                '3',                    // Customer data
-                '1',                    // View customers
-                '0'                     // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
-
-            const registrations = [];
-            const lines = output.split('\n');
-
-            lines.forEach(line => {
-                if (line.includes('ID:') && line.includes('Ticket Number:')) {
-                    const custIdMatch = line.match(/ID:\s*(\d+)/);
-                    const ticketMatch = line.match(/Ticket Number:\s*(\d+)/);
-                    const feeMatch = line.match(/Fee Status:\s*(\w+)/);
-
-                    if (custIdMatch) {
-                        registrations.push({
-                            customerID: parseInt(custIdMatch[1]),
-                            ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
-                            feeStatus: feeMatch ? feeMatch[1] : 'Unpaid',
-                            customerName: 'Customer',
-                            customerEmail: 'customer@event.com'
-                        });
-                    }
-                }
-            });
-
-            return { success: true, registrations };
-        } catch (error) {
-            return { success: false, registrations: [], message: error.message };
-        }
-    }
-
-    async updateCustomerFeeStatus(data) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const registrationsFile = path.join(DATA_DIR, 'registrations.json');
-            
-            let registrations = [];
-            if (fs.existsSync(registrationsFile)) {
-                try {
-                    registrations = JSON.parse(fs.readFileSync(registrationsFile, 'utf8'));
-                } catch (e) {
-                    registrations = [];
-                }
-            }
-            
-            const reg = registrations.find(r => r.ID === data.registrationID);
-            if (!reg) {
-                return { success: false, message: 'Registration not found' };
-            }
-            
-            reg.feeStatus = data.feeStatus;
-            fs.writeFileSync(registrationsFile, JSON.stringify(registrations, null, 2));
-            
-            console.log('Fee status updated:', data);
-            return { success: true, message: 'Fee status updated!' };
-        } catch (error) {
-            console.error('updateCustomerFeeStatus error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async customerSignup(data) {
-        try {
-            // Check if username already exists
-            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
-            if (customers && customers.some(c => c.username === data.username)) {
-                return { success: false, message: 'Username already exists' };
-            }
-
-            const inputs = [
-                '2',           // Choose Customer
-                '1',           // Choose Signup
-                data.name,
-                data.email,
-                data.username,
-                data.password,
-                '0'            // Exit
-            ];
-
-            await this.executeCommand(inputs);
-
-            // Read from customers.dat to get the registered customer
-            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
-            const newCustomer = allCustomers.find(c => c.username === data.username);
-
-            if (newCustomer) {
-                return { 
-                    success: true, 
-                    ID: newCustomer.ID, 
-                    message: 'Customer registered successfully!' 
-                };
-            }
-
-            return { success: false, message: 'Username already exists' };
-        } catch (error) {
-            console.error('customerSignup error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async customerLogin(username, password) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const customersFile = path.join(DATA_DIR, 'customers.json');
-            
-            let customers = [];
-            if (fs.existsSync(customersFile)) {
-                try {
-                    customers = JSON.parse(fs.readFileSync(customersFile, 'utf8'));
-                } catch (e) {
-                    customers = [];
-                }
-            }
-            
-            const customer = customers.find(c => c.username === username && c.password === password);
-            if (!customer) {
-                return { success: false, message: 'Invalid credentials' };
-            }
-            
-            console.log('Customer logged in:', customer.ID);
-            return { success: true, user: { ID: customer.ID, name: customer.name, email: customer.email } };
-        } catch (error) {
-            console.error('customerLogin error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async customerRegister(data) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const registrationsFile = path.join(DATA_DIR, 'registrations.json');
-            const eventsFile = path.join(DATA_DIR, 'events.json');
-            
-            let registrations = [];
-            let events = [];
-            
-            if (fs.existsSync(registrationsFile)) {
-                try {
-                    registrations = JSON.parse(fs.readFileSync(registrationsFile, 'utf8'));
-                } catch (e) {
-                    registrations = [];
-                }
-            }
-            
-            if (fs.existsSync(eventsFile)) {
-                try {
-                    events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
-                } catch (e) {
-                    events = [];
-                }
-            }
-            
-            // Check if event exists and has available seats
-            const event = events.find(e => e.ID === data.eventID);
-            if (!event) {
-                return { success: false, message: 'Event not found' };
-            }
-            
-            if (event.soldTickets >= event.totalSeats) {
-                return { success: false, message: 'All seats are filled for this event' };
-            }
-            
-            // Check if already registered
-            const alreadyRegistered = registrations.find(r => 
-                r.custID === data.custID && r.eventID === data.eventID
-            );
-            
-            if (alreadyRegistered) {
-                return { success: false, message: 'Already registered for this event' };
-            }
-            
-            // Generate ticket number
-            const ticketNum = Math.floor(Math.random() * 90000) + 10000;
-            
-            // Create new registration
-            registrations.push({
-                ID: registrations.length + 1,
-                custID: data.custID,
-                eventID: data.eventID,
-                ticketNum,
-                feeStatus: 'Unpaid',
-                registeredDate: new Date().toISOString()
-            });
-            
-            // Increment sold tickets for the event
-            const eventIndex = events.findIndex(e => e.ID === data.eventID);
-            if (eventIndex !== -1) {
-                events[eventIndex].soldTickets++;
-            }
-            
-            fs.writeFileSync(registrationsFile, JSON.stringify(registrations, null, 2));
-            fs.writeFileSync(eventsFile, JSON.stringify(events, null, 2));
-            
-            console.log('Customer registered:', { custID: data.custID, eventID: data.eventID, ticketNum });
-            return { success: true, ticketNum, message: 'Registered successfully!' };
-        } catch (error) {
-            console.error('customerRegister error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async customerGetRegistrations(custID) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const registrationsFile = path.join(DATA_DIR, 'registrations.json');
-            const eventsFile = path.join(DATA_DIR, 'events.json');
-            
-            let registrations = [];
-            let events = [];
-            
-            if (fs.existsSync(registrationsFile)) {
-                try {
-                    registrations = JSON.parse(fs.readFileSync(registrationsFile, 'utf8'));
-                } catch (e) {
-                    registrations = [];
-                }
-            }
-            
-            if (fs.existsSync(eventsFile)) {
-                try {
-                    events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
-                } catch (e) {
-                    events = [];
-                }
-            }
-            
-            // Filter registrations for this customer and add event details, excluding deleted events
-            const customerRegs = registrations
-                .filter(r => r.custID === custID)
-                .filter(r => events.some(e => e.ID === r.eventID)) // Only include registrations for events that still exist
-                .map(r => {
-                    const event = events.find(e => e.ID === r.eventID);
-                    return {
-                        ...r,
-                        eventName: event ? event.name : 'Unknown Event',
-                        eventID: r.eventID
-                    };
-                });
-            
-            console.log('Customer registrations:', customerRegs);
-            return { success: true, registrations: customerRegs };
-        } catch (error) {
-            console.error('customerGetRegistrations error:', error);
-            return { success: false, registrations: [], message: error.message };
-        }
+    // Alias methods for backward compatibility with renderer.js naming
+    async staffAdd(data) {
+        return this.addStaff(data);
     }
 
     async staffGetByEvent(eventID) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const staffFile = path.join(DATA_DIR, 'staff.json');
-            
-            let staff = [];
-            if (fs.existsSync(staffFile)) {
-                try {
-                    staff = JSON.parse(fs.readFileSync(staffFile, 'utf8'));
-                } catch (e) {
-                    staff = [];
-                }
-            }
-            
-            const eventStaff = staff.filter(s => s.eventID === eventID);
-            console.log('Staff for event', eventID, ':', eventStaff);
-            return { success: true, staff: eventStaff };
-        } catch (error) {
-            console.error('staffGetByEvent error:', error);
-            return { success: false, staff: [], message: error.message };
-        }
-    }
-
-    async staffAdd(data) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const staffFile = path.join(DATA_DIR, 'staff.json');
-            
-            let staff = [];
-            if (fs.existsSync(staffFile)) {
-                try {
-                    staff = JSON.parse(fs.readFileSync(staffFile, 'utf8'));
-                } catch (e) {
-                    staff = [];
-                }
-            }
-            
-            const newStaff = {
-                ID: staff.length > 0 ? Math.max(...staff.map(s => s.ID)) + 1 : 1,
-                eventID: data.eventID,
-                name: data.name,
-                email: data.email,
-                team: data.team,
-                position: data.position,
-                createdDate: new Date().toISOString()
-            };
-            
-            staff.push(newStaff);
-            fs.writeFileSync(staffFile, JSON.stringify(staff, null, 2));
-            
-            console.log('Staff added:', newStaff);
-            return { success: true, ID: newStaff.ID, message: 'Staff added!' };
-        } catch (error) {
-            console.error('staffAdd error:', error);
-            return { success: false, message: error.message };
-        }
-    }
-
-    async staffDelete(staffID) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const staffFile = path.join(DATA_DIR, 'staff.json');
-            
-            let staff = [];
-            if (fs.existsSync(staffFile)) {
-                try {
-                    staff = JSON.parse(fs.readFileSync(staffFile, 'utf8'));
-                } catch (e) {
-                    staff = [];
-                }
-            }
-            
-            const index = staff.findIndex(s => s.ID === staffID);
-            if (index === -1) {
-                return { success: false, message: 'Staff not found' };
-            }
-            
-            staff.splice(index, 1);
-            fs.writeFileSync(staffFile, JSON.stringify(staff, null, 2));
-            
-            console.log('Staff deleted:', staffID);
-            return { success: true, message: 'Staff deleted!' };
-        } catch (error) {
-            console.error('staffDelete error:', error);
-            return { success: false, message: error.message };
-        }
+        return this.getStaffByEvent(eventID);
     }
 
     async staffUpdate(data) {
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const staffFile = path.join(DATA_DIR, 'staff.json');
-            
-            let staff = [];
-            if (fs.existsSync(staffFile)) {
-                try {
-                    staff = JSON.parse(fs.readFileSync(staffFile, 'utf8'));
-                } catch (e) {
-                    staff = [];
-                }
+            const inputs = [
+                '19',                       // Operation: Update staff
+                data.ID.toString(),
+                data.name,
+                data.email,
+                data.team,
+                data.position,
+                '0'                         // Exit
+            ];
+
+            const output = await this.executeCommand(inputs);
+            console.log('Backend staff update output:', output);
+            console.log('Output type:', typeof output, 'Length:', output.length);
+
+            if (output.toLowerCase().includes('updated successfully') || output.toLowerCase().includes('update')) {
+                return { success: true, message: 'Staff updated successfully!' };
             }
-            
-            const index = staff.findIndex(s => s.ID === data.ID);
-            if (index === -1) {
-                return { success: false, message: 'Staff not found' };
-            }
-            
-            staff[index] = {
-                ...staff[index],
-                name: data.name,
-                email: data.email,
-                team: data.team,
-                position: data.position
-            };
-            
-            fs.writeFileSync(staffFile, JSON.stringify(staff, null, 2));
-            
-            console.log('Staff updated:', staff[index]);
-            return { success: true, message: 'Staff updated!' };
+
+            return { success: false, message: output || 'Failed to update staff' };
         } catch (error) {
             console.error('staffUpdate error:', error);
             return { success: false, message: error.message };
         }
     }
 
-    async vendorGetByEvent(eventID) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const vendorFile = path.join(DATA_DIR, 'vendors.json');
-            
-            let vendors = [];
-            if (fs.existsSync(vendorFile)) {
-                try {
-                    vendors = JSON.parse(fs.readFileSync(vendorFile, 'utf8'));
-                } catch (e) {
-                    vendors = [];
-                }
-            }
-            
-            const eventVendors = vendors.filter(v => v.eventID === eventID);
-            return { success: true, vendors: eventVendors };
-        } catch (error) {
-            console.error('vendorGetByEvent error:', error);
-            return { success: false, vendors: [], message: error.message };
-        }
-    }
-
     async vendorAdd(data) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const vendorFile = path.join(DATA_DIR, 'vendors.json');
-            
-            let vendors = [];
-            if (fs.existsSync(vendorFile)) {
-                try {
-                    vendors = JSON.parse(fs.readFileSync(vendorFile, 'utf8'));
-                } catch (e) {
-                    vendors = [];
-                }
-            }
-            
-            const newVendor = {
-                ID: vendors.length > 0 ? Math.max(...vendors.map(v => v.ID)) + 1 : 1,
-                eventID: data.eventID,
-                name: data.name,
-                email: data.email,
-                prod_serv: data.prod_serv,
-                chargesDue: data.chargesDue || 0,
-                createdDate: new Date().toISOString()
-            };
-            
-            vendors.push(newVendor);
-            fs.writeFileSync(vendorFile, JSON.stringify(vendors, null, 2));
-            
-            console.log('Vendor added:', newVendor);
-            return { success: true, ID: newVendor.ID, message: 'Vendor added!' };
-        } catch (error) {
-            console.error('vendorAdd error:', error);
-            return { success: false, message: error.message };
-        }
+        return this.addVendor(data);
     }
 
-    async vendorDelete(vendorID) {
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const vendorFile = path.join(DATA_DIR, 'vendors.json');
-            
-            let vendors = [];
-            if (fs.existsSync(vendorFile)) {
-                try {
-                    vendors = JSON.parse(fs.readFileSync(vendorFile, 'utf8'));
-                } catch (e) {
-                    vendors = [];
-                }
-            }
-            
-            const index = vendors.findIndex(v => v.ID === vendorID);
-            if (index === -1) {
-                return { success: false, message: 'Vendor not found' };
-            }
-            
-            vendors.splice(index, 1);
-            fs.writeFileSync(vendorFile, JSON.stringify(vendors, null, 2));
-            
-            console.log('Vendor deleted:', vendorID);
-            return { success: true, message: 'Vendor deleted!' };
-        } catch (error) {
-            console.error('vendorDelete error:', error);
-            return { success: false, message: error.message };
-        }
+    async vendorGetByEvent(eventID) {
+        return this.getVendorsByEvent(eventID);
     }
 
     async vendorUpdate(data) {
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const vendorFile = path.join(DATA_DIR, 'vendors.json');
-            
-            let vendors = [];
-            if (fs.existsSync(vendorFile)) {
-                try {
-                    vendors = JSON.parse(fs.readFileSync(vendorFile, 'utf8'));
-                } catch (e) {
-                    vendors = [];
-                }
+            const inputs = [
+                '20',                       // Operation: Update vendor
+                data.ID.toString(),
+                data.name,
+                data.email,
+                data.prod_serv,
+                data.chargesDue.toString(),
+                '0'                         // Exit
+            ];
+
+            const output = await this.executeCommand(inputs);
+            console.log('Backend vendor update output:', output);
+            console.log('Output type:', typeof output, 'Length:', output.length);
+
+            if (output.toLowerCase().includes('updated successfully') || output.toLowerCase().includes('update')) {
+                return { success: true, message: 'Vendor updated successfully!' };
             }
-            
-            const index = vendors.findIndex(v => v.ID === data.ID);
-            if (index === -1) {
-                return { success: false, message: 'Vendor not found' };
-            }
-            
-            vendors[index] = {
-                ...vendors[index],
-                name: data.name,
-                email: data.email,
-                prod_serv: data.prod_serv,
-                chargesDue: data.chargesDue
-            };
-            
-            fs.writeFileSync(vendorFile, JSON.stringify(vendors, null, 2));
-            
-            console.log('Vendor updated:', vendors[index]);
-            return { success: true, message: 'Vendor updated!' };
+
+            return { success: false, message: output || 'Failed to update vendor' };
         } catch (error) {
             console.error('vendorUpdate error:', error);
             return { success: false, message: error.message };
@@ -1398,38 +916,34 @@ class BackendBridge {
 
     async getRegistrationsByEvent(eventID) {
         try {
+            // Call backend to get registrations for this event from .dat file
             const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',
-                'temp_pass',
-                '0',                    // Continue
-                '5',                    // Event details
+                '10',                   // Operation: Get registrations by event
                 eventID.toString(),
-                '3',                    // Customer data
-                '1',                    // View customers
                 '0'                     // Exit
             ];
 
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Backend registration output:', output);
 
             const registrations = [];
             const lines = output.split('\n');
 
             lines.forEach(line => {
-                if (line.includes('ID:') && line.includes('Ticket Number:')) {
-                    const custIdMatch = line.match(/ID:\s*(\d+)/);
-                    const ticketMatch = line.match(/Ticket Number:\s*(\d+)/);
-                    const feeMatch = line.match(/Fee Status:\s*(\w+)/);
+                if (line.includes('CustID:')) {
+                    const custIdMatch = line.match(/CustID:\s*(\d+)/);
+                    const nameMatch = line.match(/Name:\s*([^\s]+(?:\s+[^\s]+)?)\s+Email:/);
+                    const emailMatch = line.match(/Email:\s*(\S+)/);
+                    const ticketMatch = line.match(/Ticket:\s*(\d+)/);
+                    const statusMatch = line.match(/Status:\s*(\w+)/);
 
                     if (custIdMatch) {
                         registrations.push({
                             customerID: parseInt(custIdMatch[1]),
+                            customerName: nameMatch ? nameMatch[1] : 'Unknown',
+                            customerEmail: emailMatch ? emailMatch[1] : 'unknown@email.com',
                             ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
-                            feeStatus: feeMatch ? feeMatch[1] : 'Unpaid',
-                            customerName: 'Customer',
-                            customerEmail: 'customer@event.com'
+                            feeStatus: statusMatch ? statusMatch[1] : 'Unpaid'
                         });
                     }
                 }
@@ -1441,79 +955,260 @@ class BackendBridge {
         }
     }
 
+    async registrationGetByEvent(eventID) {
+        // Alias for renderer.js compatibility
+        return this.getRegistrationsByEvent(eventID);
+    }
+
     async updateCustomerFeeStatus(data) {
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const registrationsFile = path.join(DATA_DIR, 'registrations.json');
-            
-            let registrations = [];
-            if (fs.existsSync(registrationsFile)) {
-                try {
-                    registrations = JSON.parse(fs.readFileSync(registrationsFile, 'utf8'));
-                } catch (e) {
-                    registrations = [];
-                }
+            const inputs = [
+                '11',                   // Operation: Update registration fee status
+                data.custID.toString(),
+                data.eventID.toString(),
+                data.feeStatus,
+                '0'                     // Exit
+            ];
+
+            console.log('updateCustomerFeeStatus inputs:', inputs);
+            const output = await this.executeCommand(inputs);
+            console.log('Backend output:', output);
+
+            if (output.includes('Updated successfully') || output.includes('updated successfully')) {
+                return { success: true, message: 'Fee status updated!' };
             }
-            
-            const reg = registrations.find(r => r.ID === data.registrationID);
-            if (!reg) {
-                return { success: false, message: 'Registration not found' };
-            }
-            
-            reg.feeStatus = data.feeStatus;
-            fs.writeFileSync(registrationsFile, JSON.stringify(registrations, null, 2));
-            
-            console.log('Fee status updated:', data);
-            return { success: true, message: 'Fee status updated!' };
+
+            return { success: false, message: output || 'Failed to update fee status' };
         } catch (error) {
             console.error('updateCustomerFeeStatus error:', error);
             return { success: false, message: error.message };
         }
     }
 
-    async registrationGetByEvent(eventID) {
+    async customerSignup(data) {
         try {
-            const fs = require('fs');
-            const path = require('path');
-            const registrationsFile = path.join(DATA_DIR, 'registrations.json');
-            const customersFile = path.join(DATA_DIR, 'customers.json');
+            // Check if username already exists
+            const customers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            if (customers && customers.some(c => c.username === data.username)) {
+                return { success: false, message: 'Username already exists' };
+            }
+
+            const inputs = [
+                '2',           // Choose Customer
+                '1',           // Choose Signup
+                data.name,
+                data.email,
+                data.username,
+                data.password,
+                '0'            // Exit
+            ];
+
+            await this.executeCommand(inputs);
+
+            // Read from customers.dat to get the registered customer
+            const allCustomers = readAllFromDat('customers.dat', parseCustomer, CUSTOMER_SIZE);
+            const newCustomer = allCustomers.find(c => c.username === data.username);
+
+            if (newCustomer) {
+                return { 
+                    success: true, 
+                    ID: newCustomer.ID, 
+                    message: 'Customer registered successfully!' 
+                };
+            }
+
+            return { success: false, message: 'Username already exists' };
+        } catch (error) {
+            console.error('customerSignup error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async customerRegister(data) {
+        try {
+            const eventsFile = path.join(DATA_DIR, 'events.json');
             
-            let registrations = [];
-            let customers = [];
+            let events = [];
             
-            if (fs.existsSync(registrationsFile)) {
+            if (fs.existsSync(eventsFile)) {
                 try {
-                    registrations = JSON.parse(fs.readFileSync(registrationsFile, 'utf8'));
+                    events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
                 } catch (e) {
-                    registrations = [];
+                    events = [];
                 }
             }
             
-            if (fs.existsSync(customersFile)) {
+            // Check if event exists and has available seats
+            const event = events.find(e => e.ID === data.eventID);
+            if (!event) {
+                return { success: false, message: 'Event not found' };
+            }
+            
+            if (event.soldTickets >= event.totalSeats) {
+                return { success: false, message: 'All seats are filled for this event' };
+            }
+            
+            // Check if already registered
+            const registrations = readAllFromDat('registrations.dat', parseRegistration, REGISTRATION_SIZE);
+            const alreadyRegistered = registrations.find(r => 
+                r.customerID === data.custID && r.eventID === data.eventID
+            );
+            
+            if (alreadyRegistered) {
+                return { success: false, message: 'Already registered for this event' };
+            }
+            
+            // Generate ticket number
+            const ticketNum = Math.floor(Math.random() * 90000) + 10000;
+            
+            // Call backend to add registration to .dat file
+            const inputs = [
+                '12',                           // Operation: Add registration
+                data.custID.toString(),
+                data.eventID.toString(),
+                ticketNum.toString(),
+                'Unpaid',
+                '0'                             // Exit
+            ];
+
+            const output = await this.executeCommand(inputs);
+            console.log('Backend registration output:', output);
+
+            if (!output.includes('added successfully')) {
+                return { success: false, message: 'Failed to register with backend' };
+            }
+            
+            // Increment sold tickets for the event
+            const eventIndex = events.findIndex(e => e.ID === data.eventID);
+            if (eventIndex !== -1) {
+                events[eventIndex].soldTickets++;
+            }
+            
+            fs.writeFileSync(eventsFile, JSON.stringify(events, null, 2));
+            
+            console.log('Customer registered:', { custID: data.custID, eventID: data.eventID, ticketNum });
+            return { success: true, ticketNum, message: 'Registered successfully!' };
+        } catch (error) {
+            console.error('customerRegister error:', error);
+            return { success: false, message: error.message };
+        }
+    }
+
+    async customerGetRegistrations(custID) {
+        try {
+            const eventsFile = path.join(DATA_DIR, 'events.json');
+            
+            let events = [];
+            
+            if (fs.existsSync(eventsFile)) {
                 try {
-                    customers = JSON.parse(fs.readFileSync(customersFile, 'utf8'));
+                    events = JSON.parse(fs.readFileSync(eventsFile, 'utf8'));
                 } catch (e) {
-                    customers = [];
+                    events = [];
                 }
             }
             
-            // Filter registrations for this event and add customer details
-            const eventRegs = registrations
-                .filter(r => r.eventID === eventID)
+            // Read registrations from .dat file
+            const registrations = readAllFromDat('registrations.dat', parseRegistration, REGISTRATION_SIZE);
+            
+            // Filter registrations for this customer and add event details, excluding deleted events
+            const customerRegs = registrations
+                .filter(r => r.customerID === custID)
+                .filter(r => events.some(e => e.ID === r.eventID)) // Only include registrations for events that still exist
                 .map(r => {
-                    const customer = customers.find(c => c.ID === r.custID);
+                    const event = events.find(e => e.ID === r.eventID);
                     return {
                         ...r,
-                        customerName: customer ? customer.name : 'N/A',
-                        customerEmail: customer ? customer.email : 'N/A'
+                        eventName: event ? event.name : 'Unknown Event',
+                        eventID: r.eventID
                     };
                 });
             
-            console.log('Registrations for event', eventID, ':', eventRegs);
-            return { success: true, registrations: eventRegs };
+            console.log('Customer registrations:', customerRegs);
+            return { success: true, registrations: customerRegs };
         } catch (error) {
-            console.error('registrationGetByEvent error:', error);
+            console.error('customerGetRegistrations error:', error);
+            return { success: false, registrations: [], message: error.message };
+        }
+    }
+
+    // ======================= REGISTRATION FUNCTIONS =======================
+    async registerForEvent(data) {
+        try {
+            const inputs = [
+                '2',                        // Customer
+                '2',                        // Login
+                'temp_user',
+                'temp_pass',
+                '0',                        // Continue
+                '2',                        // Register
+                data.eventID.toString(),
+                '0'                         // Exit
+            ];
+
+            const output = await this.executeCommand(inputs);
+            console.log('Backend output:', output);
+
+            const ticketMatch = output.match(/ticket number is\s*(\d+)/i);
+
+            if (output.includes('Already Registered')) {
+                const prevTicket = output.match(/ticket number is\s*(\d+)/i);
+                return {
+                    success: false,
+                    message: `Already registered! Ticket: ${prevTicket ? prevTicket[1] : 'N/A'}`
+                };
+            }
+
+            if (output.includes('successfully') || ticketMatch) {
+                return {
+                    success: true,
+                    ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
+                    message: 'Registered successfully!'
+                };
+            }
+
+            return { success: false, message: 'Registration failed' };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    }
+
+    async getRegistrationsByEvent(eventID) {
+        try {
+            const inputs = [
+                '10',                   // Operation: Get registrations by event
+                eventID.toString(),
+                '0'                     // Exit
+            ];
+
+            const output = await this.executeCommand(inputs);
+            console.log('Backend registration output:', output);
+
+            const registrations = [];
+            const lines = output.split('\n');
+
+            lines.forEach(line => {
+                if (line.includes('CustID:')) {
+                    const custIdMatch = line.match(/CustID:\s*(\d+)/);
+                    const nameMatch = line.match(/Name:\s*([^\s]+(?:\s+[^\s]+)?)\s+Email:/);
+                    const emailMatch = line.match(/Email:\s*(\S+)/);
+                    const ticketMatch = line.match(/Ticket:\s*(\d+)/);
+                    const statusMatch = line.match(/Status:\s*(\w+)/);
+
+                    if (custIdMatch) {
+                        registrations.push({
+                            customerID: parseInt(custIdMatch[1]),
+                            customerName: nameMatch ? nameMatch[1] : 'Unknown',
+                            customerEmail: emailMatch ? emailMatch[1] : 'unknown@email.com',
+                            ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
+                            feeStatus: statusMatch ? statusMatch[1] : 'Unpaid'
+                        });
+                    }
+                }
+            });
+
+            return { success: true, registrations };
+        } catch (error) {
             return { success: false, registrations: [], message: error.message };
         }
     }
