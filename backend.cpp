@@ -5,7 +5,7 @@
 #include <vector>
 using namespace std;
 
-/* ======================= GLOBAL FILE NAMES ======================= */
+// GLOBAL FILE NAMES
 char ORG_FILE[] = "organisers.dat";
 char CUST_FILE[] = "customers.dat";
 char REG_FILE[] = "registrations.dat";
@@ -13,7 +13,7 @@ char STAFF_FILE[] = "staff.dat";
 char VENDOR_FILE[] = "vendors.dat";
 // Note: Events use events.json
 
-// ========================== ENUM DEFINITIONS ==========================
+// ENUM DEFINITIONS
 enum EventType { MUN = 1, OLYMPIAD, SEMINAR, CEREMONY, FESTIVAL, CONCERT, CUSTOM };
 
 // Operation codes for backend operations
@@ -46,7 +46,7 @@ enum OperationCode {
     OP_GET_VENDOR_COUNT = 22
 };
 
-// ========================== STRUCT DEFINITIONS ==========================
+// STRUCT DEFINITIONS
 struct Organiser {
     int ID;
     char name[50], email[50], username[20], password[20];
@@ -82,7 +82,130 @@ struct Registration {
     char feeStatus[10];
 };
 
-/* ======================= UTILITY ======================= */
+// Funtion prototypes
+
+// Utility functions
+bool isEmptyFile(const char* filename);
+bool searchOrganiserID(int targetID);
+bool searchCustomerID(int targetID);
+bool searchEventID(int targetID);
+bool searchStaffID(int targetID);
+bool searchVendorID(int targetID);
+bool searchRegistration(int eventID, int custID);
+
+// Organiser functions
+void organiserSignup();
+void organiserLogin();
+
+// Customer functions
+void customerSignup();
+void customerLogin();
+
+// Event functions
+void addEvent();
+void viewEvents();
+void modifyEvent();
+void deleteEvent();
+
+// Staff functions
+void addStaffToFile();
+void getStaffByEventFile();
+void deleteStaffFromFile();
+void updateStaffInFile();
+
+// Vendor functions
+void addVendorToFile();
+void getVendorsByEventFile();
+void deleteVendorFromFile();
+void updateVendorInFile();
+
+// Registration functions
+void addRegistration();
+void getRegistrationsByCustomer();
+void getRegistrationsByEvent();
+void updateRegistrationFeeStatus();
+
+// Recursive functions
+int countStaffByEventRecursive(vector<Staff>& staff, int index, int eventID);
+int countVendorsByEventRecursive(vector<Vendor>& vendors, int index, int eventID);
+void getStaffCountByEvent();
+void getVendorCountByEvent();
+
+// Main entry point
+int main() {
+    srand((unsigned)time(0));
+    
+    int operation;
+    cin >> operation;
+    
+    // Handle all operation codes (single operation per execution)
+    switch (static_cast<OperationCode>(operation)) {
+        // Authentication operations
+        case OP_ORGANISER_SIGNUP:
+            organiserSignup();
+            break;
+        case OP_ORGANISER_LOGIN:
+            organiserLogin();
+            break;
+        case OP_CUSTOMER_SIGNUP:
+            customerSignup();
+            break;
+        case OP_CUSTOMER_LOGIN:
+            customerLogin();
+            break;
+        
+        // Registration operations
+        case OP_GET_REGISTRATIONS_BY_EVENT:
+            getRegistrationsByEvent();
+            break;
+        case OP_UPDATE_REGISTRATION_FEE_STATUS:
+            updateRegistrationFeeStatus();
+            break;
+        case OP_ADD_REGISTRATION:
+            addRegistration();
+            break;
+        
+        // Staff operations
+        case OP_ADD_STAFF:
+            addStaffToFile();
+            break;
+        case OP_GET_STAFF_BY_EVENT:
+            getStaffByEventFile();
+            break;
+        case OP_DELETE_STAFF:
+            deleteStaffFromFile();
+            break;
+        case OP_UPDATE_STAFF:
+            updateStaffInFile();
+            break;
+        
+        // Vendor operations
+        case OP_ADD_VENDOR:
+            addVendorToFile();
+            break;
+        case OP_GET_VENDORS_BY_EVENT:
+            getVendorsByEventFile();
+            break;
+        case OP_DELETE_VENDOR:
+            deleteVendorFromFile();
+            break;
+        case OP_UPDATE_VENDOR:
+            updateVendorInFile();
+            break;
+        
+        // Counting operations (recursive)
+        case OP_GET_STAFF_COUNT:
+            getStaffCountByEvent();
+            break;
+        case OP_GET_VENDOR_COUNT:
+            getVendorCountByEvent();
+            break;
+    }
+    
+    return 0;
+}
+
+// Utility function definitions
 bool isEmptyFile(const char* filename) {
     ifstream file(filename, ios::binary);
     if (!file) return true;
@@ -166,7 +289,7 @@ bool searchRegistration(int eventID, int custID) {
     return false;
 }
 
-/* ======================= ORGANISER FUNCTIONS ======================= */
+// Organiser function definitions
 void organiserSignup() {
     Organiser org;
     
@@ -221,7 +344,7 @@ void organiserLogin() {
     cout.flush();
 }
 
-/* ======================= CUSTOMER FUNCTIONS ======================= */
+// Customer function definitions
 void customerSignup() {
     Customer cust;
     
@@ -276,10 +399,10 @@ void customerLogin() {
     cout.flush();
 }
 
-/* ======================= EVENT FUNCTIONS ======================= */
+// Event function definitions
 void addEvent() {
     Event event;
-    event.orgID = 0;  // Will be set by organiser
+    event.orgID = 0;
     strcpy(event.orgName, "");
     
     int newID;
@@ -342,165 +465,7 @@ void deleteEvent() {
     cout.flush();
 }
 
-/* ======================= STAFF FUNCTIONS ======================= */
-void addStaff(int eventID) {
-    Staff staff;
-    
-    int newID;
-    do {
-        newID = (rand() % 900) + 100;
-    } while (searchStaffID(newID));
-    
-    staff.ID = newID;
-    staff.eventID = eventID;
-    
-    cin.ignore();
-    cin.getline(staff.name, 50);
-    cin.getline(staff.email, 50);
-    cin.getline(staff.team, 20);
-    cin.getline(staff.position, 20);
-    
-    ofstream file(STAFF_FILE, ios::binary | ios::app);
-    file.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
-    file.close();
-    
-    cout << "Staff member added successfully!" << endl;
-    cout.flush();
-}
-
-void viewStaff(int eventID) {
-    ifstream file(STAFF_FILE, ios::binary);
-    if (!file) {
-        cout << "No staff found" << endl;
-        cout.flush();
-        return;
-    }
-    
-    Staff staff;
-    bool found = false;
-    while (file.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
-        if (staff.eventID == eventID) {
-            cout << "ID: " << staff.ID << " Name: " << staff.name << " Email: " << staff.email 
-                 << " Team: " << staff.team << " Position: " << staff.position << endl;
-            found = true;
-        }
-    }
-    
-    file.close();
-    if (!found) cout << "No staff found for this event" << endl;
-    cout.flush();
-}
-
-void deleteStaff() {
-    int staffID;
-    cin >> staffID;
-    
-    if (!searchStaffID(staffID)) {
-        cout << "Staff not found" << endl;
-        cout.flush();
-        return;
-    }
-    
-    ifstream fileRead(STAFF_FILE, ios::binary);
-    ofstream fileWrite("temp.dat", ios::binary);
-    
-    Staff staff;
-    while (fileRead.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
-        if (staff.ID != staffID) {
-            fileWrite.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
-        }
-    }
-    
-    fileRead.close();
-    fileWrite.close();
-    
-    remove(STAFF_FILE);
-    rename("temp.dat", STAFF_FILE);
-    
-    cout << "Staff Deleted successfully!" << endl;
-    cout.flush();
-}
-
-/* ======================= VENDOR FUNCTIONS ======================= */
-void addVendor(int eventID) {
-    Vendor vendor;
-    
-    int newID;
-    do {
-        newID = (rand() % 900) + 100;
-    } while (searchVendorID(newID));
-    
-    vendor.ID = newID;
-    vendor.eventID = eventID;
-    
-    cin.ignore();
-    cin.getline(vendor.name, 50);
-    cin.getline(vendor.email, 50);
-    cin.getline(vendor.prod_serv, 50);
-    cin >> vendor.chargesDue;
-    
-    ofstream file(VENDOR_FILE, ios::binary | ios::app);
-    file.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
-    file.close();
-    
-    cout << "Vendor added successfully!" << endl;
-    cout.flush();
-}
-
-void viewVendors(int eventID) {
-    ifstream file(VENDOR_FILE, ios::binary);
-    if (!file) {
-        cout << "No vendors found" << endl;
-        cout.flush();
-        return;
-    }
-    
-    Vendor vendor;
-    bool found = false;
-    while (file.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
-        if (vendor.eventID == eventID) {
-            cout << "ID: " << vendor.ID << " Name: " << vendor.name << " Email: " << vendor.email 
-                 << " Product/Service: " << vendor.prod_serv << " Charges: " << vendor.chargesDue << endl;
-            found = true;
-        }
-    }
-    
-    file.close();
-    if (!found) cout << "No vendors found for this event" << endl;
-    cout.flush();
-}
-
-void deleteVendor() {
-    int vendorID;
-    cin >> vendorID;
-    
-    if (!searchVendorID(vendorID)) {
-        cout << "Vendor not found" << endl;
-        cout.flush();
-        return;
-    }
-    
-    ifstream fileRead(VENDOR_FILE, ios::binary);
-    ofstream fileWrite("temp.dat", ios::binary);
-    
-    Vendor vendor;
-    while (fileRead.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
-        if (vendor.ID != vendorID) {
-            fileWrite.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
-        }
-    }
-    
-    fileRead.close();
-    fileWrite.close();
-    
-    remove(VENDOR_FILE);
-    rename("temp.dat", VENDOR_FILE);
-    
-    cout << "Vendor Deleted successfully!" << endl;
-    cout.flush();
-}
-
-/* ======================= REGISTRATION FUNCTIONS ======================= */
+// Registration function definitions
 void addRegistration() {
     Registration reg;
     
@@ -633,7 +598,7 @@ void updateRegistrationFeeStatus() {
     cout.flush();
 }
 
-/* ======================= STAFF FUNCTIONS ======================= */
+// Staff function definitions
 void addStaffToFile() {
     Staff staff;
     
@@ -756,7 +721,7 @@ void updateStaffInFile() {
     cout.flush();
 }
 
-/* ======================= VENDOR FUNCTIONS ======================= */
+// Vendor function definitions
 void addVendorToFile() {
     Vendor vendor;
     
@@ -940,78 +905,4 @@ void getVendorCountByEvent() {
 
     int count = countVendorsByEventRecursive(vendors, 0, eventID);
     cout << "Vendor Count: " << count << endl;
-}
-
-/* ======================= MAIN ENTRY POINT ======================= */
-int main() {
-    srand((unsigned)time(0));
-    
-    int operation;
-    cin >> operation;
-    
-    // Handle all operation codes (single operation per execution)
-    switch (static_cast<OperationCode>(operation)) {
-        // Authentication operations
-        case OP_ORGANISER_SIGNUP:
-            organiserSignup();
-            break;
-        case OP_ORGANISER_LOGIN:
-            organiserLogin();
-            break;
-        case OP_CUSTOMER_SIGNUP:
-            customerSignup();
-            break;
-        case OP_CUSTOMER_LOGIN:
-            customerLogin();
-            break;
-        
-        // Registration operations
-        case OP_GET_REGISTRATIONS_BY_EVENT:
-            getRegistrationsByEvent();
-            break;
-        case OP_UPDATE_REGISTRATION_FEE_STATUS:
-            updateRegistrationFeeStatus();
-            break;
-        case OP_ADD_REGISTRATION:
-            addRegistration();
-            break;
-        
-        // Staff operations
-        case OP_ADD_STAFF:
-            addStaffToFile();
-            break;
-        case OP_GET_STAFF_BY_EVENT:
-            getStaffByEventFile();
-            break;
-        case OP_DELETE_STAFF:
-            deleteStaffFromFile();
-            break;
-        case OP_UPDATE_STAFF:
-            updateStaffInFile();
-            break;
-        
-        // Vendor operations
-        case OP_ADD_VENDOR:
-            addVendorToFile();
-            break;
-        case OP_GET_VENDORS_BY_EVENT:
-            getVendorsByEventFile();
-            break;
-        case OP_DELETE_VENDOR:
-            deleteVendorFromFile();
-            break;
-        case OP_UPDATE_VENDOR:
-            updateVendorInFile();
-            break;
-        
-        // Counting operations (recursive)
-        case OP_GET_STAFF_COUNT:
-            getStaffCountByEvent();
-            break;
-        case OP_GET_VENDOR_COUNT:
-            getVendorCountByEvent();
-            break;
-    }
-    
-    return 0;
 }
