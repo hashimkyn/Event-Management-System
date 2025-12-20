@@ -304,13 +304,11 @@ class BackendBridge {
             }
 
             const inputs = [
-                '1',           // Choose Organiser
-                '1',           // Choose Signup
+                '1',           // OP_ORGANISER_SIGNUP
                 data.name,
                 data.email,
                 data.username,
-                data.password,
-                '0'            // Exit (removed banking input)
+                data.password
             ];
 
             const output = await this.executeCommand(inputs);
@@ -349,26 +347,27 @@ class BackendBridge {
     async organiserLogin(username, password) {
         try {
             const inputs = [
-                '1',           // Choose Organiser
-                '2',           // Choose Login
+                '2',           // OP_ORGANISER_LOGIN
                 username,
-                password,
-                '0'            // Exit
+                password
             ];
 
             const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
+            console.log('Organiser login output:', output);
 
             if (output.includes('Invalid credentials')) {
                 return { success: false, message: 'Invalid credentials' };
             }
 
             if (output.includes('ORGANISER')) {
-                // Successfully logged in
+                // Successfully logged in - parse the output for ID
+                const idMatch = output.match(/Your ID:\s*(\d+)/i);
+                const userID = idMatch ? parseInt(idMatch[1]) : 999;
+                
                 return {
                     success: true,
                     user: {
-                        ID: 999, // Parse from file later if needed
+                        ID: userID,
                         name: username,
                         email: 'organiser@event.com',
                         username: username
@@ -404,13 +403,11 @@ class BackendBridge {
 
             console.log('Username is unique, proceeding with signup');
             const inputs = [
-                '2',           // Choose Customer
-                '1',           // Choose Signup
+                '3',           // OP_CUSTOMER_SIGNUP
                 data.name,
                 data.email,
                 data.username,
-                data.password,
-                '0'            // Exit
+                data.password
             ];
 
             console.log('Customer signup inputs:', inputs);
@@ -476,25 +473,7 @@ class BackendBridge {
     // ======================= EVENT FUNCTIONS =======================
     async addEvent(data) {
         try {
-            const inputs = [
-                '1',                    // Organiser
-                '2',                    // Login
-                'temp_user',            // placeholder
-                'temp_pass',            // placeholder
-                '1',                    // Add event
-                data.name,
-                data.startDate,
-                data.endDate,
-                data.venue,
-                data.totalSeats.toString(),
-                data.type.toString(),
-                '0'                     // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Add event output:', output);
-
-            // Store event data in a JSON file for retrieval
+            // Events are stored in JSON file, not in backend
             const fs = require('fs');
             const path = require('path');
             const eventsFile = path.join(DATA_DIR, 'events.json');
@@ -508,11 +487,10 @@ class BackendBridge {
                 }
             }
             
-            // Extract event ID from output
-            const idMatch = output.match(/Event ID:\s*(\d+)/i);
-            const eventId = idMatch ? parseInt(idMatch[1]) : Math.floor(Math.random() * 9000) + 1000;
+            // Generate new event ID (max existing ID + 1, or 1000 if empty)
+            const eventId = events.length > 0 ? Math.max(...events.map(e => e.ID)) + 1 : 1000;
             
-            events.push({
+            const newEvent = {
                 ID: eventId,
                 name: data.name,
                 venue: data.venue,
@@ -523,15 +501,13 @@ class BackendBridge {
                 type: data.type,
                 orgID: data.orgID,
                 orgName: data.orgName
-            });
+            };
             
+            events.push(newEvent);
             fs.writeFileSync(eventsFile, JSON.stringify(events, null, 2));
             
-            if (output.includes('added successfully') || output.includes('Event ID:')) {
-                return { success: true, message: 'Event added successfully!' };
-            }
-
-            return { success: false, message: 'Failed to add event' };
+            console.log('Event added successfully:', newEvent);
+            return { success: true, message: 'Event added successfully!', event: newEvent };
         } catch (error) {
             console.error('addEvent error:', error);
             return { success: false, message: error.message };
@@ -640,8 +616,7 @@ class BackendBridge {
                 data.name,
                 data.email,
                 data.team,
-                data.position,
-                '0'                         // Exit
+                data.position
             ];
 
             const output = await this.executeCommand(inputs);
@@ -657,8 +632,7 @@ class BackendBridge {
         try {
             const inputs = [
                 '14',                       // Operation: Get staff by event
-                eventID.toString(),
-                '0'                         // Exit
+                eventID.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -699,8 +673,7 @@ class BackendBridge {
         try {
             const inputs = [
                 '15',                       // Operation: Delete staff
-                staffID.toString(),
-                '0'                         // Exit
+                staffID.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -721,8 +694,7 @@ class BackendBridge {
                 data.name,
                 data.email,
                 data.prod_serv,
-                data.chargesDue.toString(),
-                '0'                         // Exit
+                data.chargesDue.toString()
             ];
 
             console.log('addVendor inputs:', inputs);
@@ -744,8 +716,7 @@ class BackendBridge {
         try {
             const inputs = [
                 '17',                       // Operation: Get vendors by event
-                eventID.toString(),
-                '0'                         // Exit
+                eventID.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -785,8 +756,7 @@ class BackendBridge {
         try {
             const inputs = [
                 '18',                       // Operation: Delete vendor
-                vendorID.toString(),
-                '0'                         // Exit
+                vendorID.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -815,8 +785,7 @@ class BackendBridge {
                 data.name,
                 data.email,
                 data.team,
-                data.position,
-                '0'                         // Exit
+                data.position
             ];
 
             const output = await this.executeCommand(inputs);
@@ -850,8 +819,7 @@ class BackendBridge {
                 data.name,
                 data.email,
                 data.prod_serv,
-                data.chargesDue.toString(),
-                '0'                         // Exit
+                data.chargesDue.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -873,14 +841,11 @@ class BackendBridge {
     async registerForEvent(data) {
         try {
             const inputs = [
-                '2',                        // Customer
-                '2',                        // Login
-                'temp_user',
-                'temp_pass',
-                '0',                        // Continue
-                '2',                        // Register
+                '12',                       // OP_ADD_REGISTRATION
+                data.custID.toString(),
                 data.eventID.toString(),
-                '0'                         // Exit
+                Math.floor(Math.random() * 90000 + 10000).toString(),
+                'Unpaid'
             ];
 
             const output = await this.executeCommand(inputs);
@@ -915,8 +880,7 @@ class BackendBridge {
             // Call backend to get registrations for this event from .dat file
             const inputs = [
                 '10',                   // Operation: Get registrations by event
-                eventID.toString(),
-                '0'                     // Exit
+                eventID.toString()
             ];
 
             const output = await this.executeCommand(inputs);
@@ -962,8 +926,7 @@ class BackendBridge {
                 '11',                   // Operation: Update registration fee status
                 data.custID.toString(),
                 data.eventID.toString(),
-                data.feeStatus,
-                '0'                     // Exit
+                data.feeStatus
             ];
 
             console.log('updateCustomerFeeStatus inputs:', inputs);
@@ -1024,8 +987,7 @@ class BackendBridge {
                 data.custID.toString(),
                 data.eventID.toString(),
                 ticketNum.toString(),
-                'Unpaid',
-                '0'                             // Exit
+                'Unpaid'
             ];
 
             const output = await this.executeCommand(inputs);
@@ -1089,90 +1051,9 @@ class BackendBridge {
         }
     }
 
-    // ======================= REGISTRATION FUNCTIONS =======================
-    async registerForEvent(data) {
-        try {
-            const inputs = [
-                '2',                        // Customer
-                '2',                        // Login
-                'temp_user',
-                'temp_pass',
-                '0',                        // Continue
-                '2',                        // Register
-                data.eventID.toString(),
-                '0'                         // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Backend output:', output);
-
-            const ticketMatch = output.match(/ticket number is\s*(\d+)/i);
-
-            if (output.includes('Already Registered')) {
-                const prevTicket = output.match(/ticket number is\s*(\d+)/i);
-                return {
-                    success: false,
-                    message: `Already registered! Ticket: ${prevTicket ? prevTicket[1] : 'N/A'}`
-                };
-            }
-
-            if (output.includes('successfully') || ticketMatch) {
-                return {
-                    success: true,
-                    ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
-                    message: 'Registered successfully!'
-                };
-            }
-
-            return { success: false, message: 'Registration failed' };
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    }
-
-    async getRegistrationsByEvent(eventID) {
-        try {
-            const inputs = [
-                '10',                   // Operation: Get registrations by event
-                eventID.toString(),
-                '0'                     // Exit
-            ];
-
-            const output = await this.executeCommand(inputs);
-            console.log('Backend registration output:', output);
-
-            const registrations = [];
-            const lines = output.split('\n');
-
-            lines.forEach(line => {
-                if (line.includes('CustID:')) {
-                    const custIdMatch = line.match(/CustID:\s*(\d+)/);
-                    const nameMatch = line.match(/Name:\s*([^\s]+(?:\s+[^\s]+)?)\s+Email:/);
-                    const emailMatch = line.match(/Email:\s*(\S+)/);
-                    const ticketMatch = line.match(/Ticket:\s*(\d+)/);
-                    const statusMatch = line.match(/Status:\s*(\w+)/);
-
-                    if (custIdMatch) {
-                        registrations.push({
-                            customerID: parseInt(custIdMatch[1]),
-                            customerName: nameMatch ? nameMatch[1] : 'Unknown',
-                            customerEmail: emailMatch ? emailMatch[1] : 'unknown@email.com',
-                            ticketNum: ticketMatch ? parseInt(ticketMatch[1]) : 0,
-                            feeStatus: statusMatch ? statusMatch[1] : 'Unpaid'
-                        });
-                    }
-                }
-            });
-
-            return { success: true, registrations };
-        } catch (error) {
-            return { success: false, registrations: [], message: error.message };
-        }
-    }
-
     async getStaffCountByEvent(eventID) {
         try {
-            const inputs = ['21', eventID.toString(), '0'];
+            const inputs = ['21', eventID.toString()];
             const output = await this.executeCommand(inputs);
             const match = output.match(/Staff Count:\s*(\d+)/i);
             return match ? { success: true, count: parseInt(match[1]) } : { success: false, count: 0 };
@@ -1183,7 +1064,7 @@ class BackendBridge {
 
     async getVendorCountByEvent(eventID) {
         try {
-            const inputs = ['22', eventID.toString(), '0'];
+            const inputs = ['22', eventID.toString()];
             const output = await this.executeCommand(inputs);
             const match = output.match(/Vendor Count:\s*(\d+)/i);
             return match ? { success: true, count: parseInt(match[1]) } : { success: false, count: 0 };
