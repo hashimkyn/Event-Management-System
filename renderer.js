@@ -584,6 +584,8 @@ function updateEventDetailsMenu(event) {
             <p><strong>Start Date:</strong> ${event.startDate}</p>
             <p><strong>End Date:</strong> ${event.endDate}</p>
             <p><strong>Seats:</strong> ${event.soldTickets}/${event.totalSeats}</p>
+            <p><strong>Staff Members:</strong> <span id="staff-count-display">Loading...</span></p>
+            <p><strong>Vendors:</strong> <span id="vendor-count-display">Loading...</span></p>
         </div>
         
         <button id="details-customer-data-btn" style="margin-right: 10px; margin-bottom: 10px;">Customer Data</button>
@@ -600,6 +602,28 @@ function updateEventDetailsMenu(event) {
         currentViewEventId = null;
         showMenu('events');
     };
+    
+    // Fetch counts asynchronously and update display
+    loadEventCounts(event.ID);
+}
+
+async function loadEventCounts(eventID) {
+    try {
+        const staffCountResult = await window.api.getStaffCountByEvent(eventID);
+        const vendorCountResult = await window.api.getVendorCountByEvent(eventID);
+        
+        const staffCountSpan = document.getElementById('staff-count-display');
+        const vendorCountSpan = document.getElementById('vendor-count-display');
+        
+        if (staffCountSpan) {
+            staffCountSpan.textContent = staffCountResult.success ? staffCountResult.count : '0';
+        }
+        if (vendorCountSpan) {
+            vendorCountSpan.textContent = vendorCountResult.success ? vendorCountResult.count : '0';
+        }
+    } catch (error) {
+        console.error('Error loading event counts:', error);
+    }
 }
 
 async function showCustomerDataPage() {

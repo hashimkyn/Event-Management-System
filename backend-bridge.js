@@ -1169,6 +1169,28 @@ class BackendBridge {
             return { success: false, registrations: [], message: error.message };
         }
     }
+
+    async getStaffCountByEvent(eventID) {
+        try {
+            const inputs = ['21', eventID.toString(), '0'];
+            const output = await this.executeCommand(inputs);
+            const match = output.match(/Staff Count:\s*(\d+)/i);
+            return match ? { success: true, count: parseInt(match[1]) } : { success: false, count: 0 };
+        } catch (error) {
+            return { success: false, count: 0, message: error.message };
+        }
+    }
+
+    async getVendorCountByEvent(eventID) {
+        try {
+            const inputs = ['22', eventID.toString(), '0'];
+            const output = await this.executeCommand(inputs);
+            const match = output.match(/Vendor Count:\s*(\d+)/i);
+            return match ? { success: true, count: parseInt(match[1]) } : { success: false, count: 0 };
+        } catch (error) {
+            return { success: false, count: 0, message: error.message };
+        }
+    }
 }
 
 module.exports = new BackendBridge();

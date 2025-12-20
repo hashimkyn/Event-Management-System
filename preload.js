@@ -31,7 +31,11 @@ const api = {
     
     // Registration
     registrationGetByEvent: (eventID) => ipcRenderer.invoke('registration:getByEvent', eventID),
-    updateCustomerFeeStatus: (data) => ipcRenderer.invoke('registration:updateFeeStatus', data)
+    updateCustomerFeeStatus: (data) => ipcRenderer.invoke('registration:updateFeeStatus', data),
+    
+    // Counting (Recursive)
+    getStaffCountByEvent: (eventID) => ipcRenderer.invoke('event:getStaffCount', eventID),
+    getVendorCountByEvent: (eventID) => ipcRenderer.invoke('event:getVendorCount', eventID)
 };
 
 contextBridge.exposeInMainWorld('api', api);

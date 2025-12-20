@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cstring>
 #include <ctime>
+#include <vector>
 using namespace std;
 
 /* ======================= GLOBAL FILE NAMES ======================= */
@@ -852,6 +853,68 @@ void updateVendorInFile() {
     cout.flush();
 }
 
+// Recursive function to count staff members by event
+int countStaffByEventRecursive(vector<Staff>& staff, int index, int eventID) {
+    if (index >= staff.size()) {
+        return 0;  // Base case: reached end of vector
+    }
+    // Recursive case: count current + recurse for remaining
+    int count = (staff[index].eventID == eventID) ? 1 : 0;
+    return count + countStaffByEventRecursive(staff, index + 1, eventID);
+}
+
+// Recursive function to count vendors by event
+int countVendorsByEventRecursive(vector<Vendor>& vendors, int index, int eventID) {
+    if (index >= vendors.size()) {
+        return 0;  // Base case: reached end of vector
+    }
+    // Recursive case: count current + recurse for remaining
+    int count = (vendors[index].eventID == eventID) ? 1 : 0;
+    return count + countVendorsByEventRecursive(vendors, index + 1, eventID);
+}
+
+void getStaffCountByEvent() {
+    int eventID;
+    cin >> eventID;
+
+    ifstream inFile(STAFF_FILE, ios::binary);
+    if (!inFile) {
+        cout << "Staff Count: 0" << endl;
+        return;
+    }
+
+    vector<Staff> staff;
+    Staff s;
+    while (inFile.read((char*)&s, sizeof(Staff))) {
+        staff.push_back(s);
+    }
+    inFile.close();
+
+    int count = countStaffByEventRecursive(staff, 0, eventID);
+    cout << "Staff Count: " << count << endl;
+}
+
+void getVendorCountByEvent() {
+    int eventID;
+    cin >> eventID;
+
+    ifstream inFile(VENDOR_FILE, ios::binary);
+    if (!inFile) {
+        cout << "Vendor Count: 0" << endl;
+        return;
+    }
+
+    vector<Vendor> vendors;
+    Vendor v;
+    while (inFile.read((char*)&v, sizeof(Vendor))) {
+        vendors.push_back(v);
+    }
+    inFile.close();
+
+    int count = countVendorsByEventRecursive(vendors, 0, eventID);
+    cout << "Vendor Count: " << count << endl;
+}
+
 /* ======================= ORGANISER EVENT MENU ======================= */
 void organiserEventMenu() {
     int choice;
@@ -913,6 +976,12 @@ int main() {
                     break;
                 case 20:  // Update vendor
                     updateVendorInFile();
+                    break;
+                case 21:  // Get staff count by event (recursive)
+                    getStaffCountByEvent();
+                    break;
+                case 22:  // Get vendor count by event (recursive)
+                    getVendorCountByEvent();
                     break;
             }
             

@@ -63,5 +63,8 @@ ipcMain.handle('vendor:update', async (event, data) => backend.vendorUpdate(data
 ipcMain.handle('registration:getByEvent', async (event, eventID) => backend.registrationGetByEvent(eventID));
 ipcMain.handle('registration:updateFeeStatus', async (event, data) => backend.updateCustomerFeeStatus(data));
 
+// ======================= COUNTING IPC (RECURSIVE) =======================
+ipcMain.handle('event:getStaffCount', async (event, eventID) => backend.getStaffCountByEvent(eventID));
+ipcMain.handle('event:getVendorCount', async (event, eventID) => backend.getVendorCountByEvent(eventID));
 
 
