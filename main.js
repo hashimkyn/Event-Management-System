@@ -17,9 +17,6 @@ function createWindow() {
 
     win.loadFile('index.html');
     
-    // Remove or comment out this line to disable DevTools on startup:
-    // win.webContents.openDevTools();
-    
     return win;
 }
 

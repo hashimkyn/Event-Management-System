@@ -73,12 +73,15 @@ function clearForm(formId) {
     if (form) form.reset();
 }
 
-// ======================= LOGIN & SIGNUP =======================
+// LOGIN & SIGNUP
 async function openLogin(userType) {
+    // Display login modal and handle authentication
+    
+    // Show modal and overlay
     const modal = document.getElementById('login-modal');
     const overlay = document.getElementById('modal-overlay');
     
-    // Clear all form fields
+    // Clear form fields to prevent showing old data
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.reset();
@@ -90,8 +93,10 @@ async function openLogin(userType) {
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
+    // Setup toggle to signup form
     const loginToSignup = document.getElementById('login-to-signup');
     
+    // Allow switching to signup form
     if (loginToSignup) {
         loginToSignup.onclick = () => {
             modal.classList.add('hidden');
@@ -99,17 +104,20 @@ async function openLogin(userType) {
         };
     }
     
+    // Handle login form submission
     loginForm.onsubmit = async (e) => {
         e.preventDefault();
         const username = document.getElementById('login-username').value.trim();
         const password = document.getElementById('login-password').value.trim();
         
+        // Validate inputs before sending to backend
         if (!username || !password) {
             showMessage('Please enter username and password', 'error');
             return;
         }
         
         try {
+            // Call appropriate login function based on user type
             let result;
             if (userType === 'organiser') {
                 result = await window.api.organiserLogin(username, password);
@@ -146,10 +154,13 @@ async function openLogin(userType) {
 }
 
 async function openSignup(userType) {
+    // Display account creation interface with modal and backdrop overlay
+    
+    // Initialize modal state and backdrop
     const modal = document.getElementById('signup-modal');
     const overlay = document.getElementById('modal-overlay');
     
-    // Clear all form fields
+    // Reset form state to ensure clean input context
     const signupForm = document.getElementById('signup-form');
     if (signupForm) {
         signupForm.reset();
@@ -161,6 +172,7 @@ async function openSignup(userType) {
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
+    // Setup toggle handler for form switching
     const signupToLogin = document.getElementById('signup-to-login');
     
     if (signupToLogin) {
@@ -170,9 +182,11 @@ async function openSignup(userType) {
         };
     }
     
+    // Handle form submission with multi-field validation and password confirmation
     signupForm.onsubmit = async (e) => {
         e.preventDefault();
         
+        // Collect form field values with whitespace normalization
         const username = document.getElementById('signup-username').value.trim();
         const name = document.getElementById('signup-name').value.trim();
         const email = document.getElementById('signup-email').value.trim();
@@ -222,8 +236,10 @@ async function openSignup(userType) {
     };
 }
 
-// ======================= EVENT OPERATIONS =======================
+// EVENT OPERATIONS
 async function openAddEvent() {
+    // Display event creation form with validation and backend persistence
+    // Clear and initialize form with modal state
     clearForm('add-event-form');
     const modal = document.getElementById('add-event-modal');
     const overlay = document.getElementById('modal-overlay');
@@ -231,10 +247,12 @@ async function openAddEvent() {
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
+    // Attach submit handler with form validation pipeline
     const submitBtn = modal.querySelector('button[type="submit"]');
     submitBtn.onclick = async (e) => {
         e.preventDefault();
         
+        // Collect form data with type coercion for numeric fields
         const name = document.getElementById('event-name')?.value.trim();
         const venue = document.getElementById('event-venue')?.value.trim();
         const startDate = document.getElementById('event-start')?.value.trim();
@@ -242,6 +260,7 @@ async function openAddEvent() {
         const totalSeatsStr = document.getElementById('event-seats')?.value.trim();
         const typeStr = document.getElementById('event-type')?.value;
         
+        // Parse numeric values and validate constraints
         const totalSeats = totalSeatsStr ? parseInt(totalSeatsStr) : 0;
         const type = typeStr ? parseInt(typeStr) : 1;
         
@@ -251,17 +270,20 @@ async function openAddEvent() {
         }
         
         try {
+            // Dispatch event creation with authenticated organiser context
             const result = await window.api.eventAdd({
                 name, venue, startDate, endDate, totalSeats, type,
                 orgID: currentUser ? currentUser.ID : 0,
                 orgName: currentUser ? currentUser.name : 'Unknown'
             });
             
+            // Handle backend response and refresh view on success
             if (result.success) {
                 showMessage('Event added successfully!', 'success');
                 modal.classList.add('hidden');
                 overlay.classList.add('hidden');
                 clearForm('add-event-form');
+                // Wait for database consistency before refreshing
                 await new Promise(resolve => setTimeout(resolve, 500));
                 await loadEventsTable();
             } else {
@@ -274,14 +296,19 @@ async function openAddEvent() {
 }
 
 async function loadEventsTable() {
+    // Fetch events from persistent storage and populate table with event details
     try {
+        // Retrieve all events via IPC bridge to backend
         const result = await window.api.eventGetAll();
         const tbody = document.querySelector('#events-table tbody');
         
         if (!tbody) return;
         
+        // Clear existing DOM nodes and rebuild with fresh data
         if (result.success && result.events && result.events.length > 0) {
             tbody.innerHTML = '';
+            
+            // Create table rows with event properties and computed values
             result.events.forEach(event => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -296,6 +323,7 @@ async function loadEventsTable() {
                 tbody.appendChild(tr);
             });
         } else {
+            // Render empty state when no data available
             tbody.innerHTML = '<tr><td colspan="7">No events yet</td></tr>';
         }
     } catch (error) {
@@ -361,10 +389,12 @@ function createModifyRequestModal() {
 }
 
 async function openModifyRequest() {
+    // Display lookup form to select event for modification
+    // Get or create modal element and show with overlay
     const modal = document.getElementById('modify-request-modal') || createModifyRequestModal();
     const overlay = document.getElementById('modal-overlay');
     
-    // Reset the form to initial state
+    // Reset form to initial lookup state
     modal.querySelector('form').innerHTML = `
         <label for="modify-event-id">Event ID</label>
         <input id="modify-event-id" type="number" required placeholder="Enter Event ID">
@@ -376,11 +406,13 @@ async function openModifyRequest() {
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
+    // Attach handler for event lookup with validation
     const form = modal.querySelector('form');
     form.onsubmit = async (e) => {
         e.preventDefault();
         const eventIDStr = document.getElementById('modify-event-id')?.value.trim();
         
+        // Validate numeric input constraints
         if (!eventIDStr) {
             showMessage('Event ID is required', 'error');
             return;
@@ -393,6 +425,7 @@ async function openModifyRequest() {
         }
         
         try {
+            // Perform linear search through events to locate by ID
             const result = await window.api.eventGetAll();
             const event = result.events.find(e => e.ID === eventID);
             
@@ -401,6 +434,7 @@ async function openModifyRequest() {
                 return;
             }
             
+            // Transition to edit form with pre-populated state
             showModifyEventForm(event, modal, overlay);
         } catch (error) {
             showMessage(`Error: ${error.message}`, 'error');
@@ -409,6 +443,8 @@ async function openModifyRequest() {
 }
 
 function showModifyEventForm(event, modal, overlay) {
+    // Display edit form pre-filled with current event details
+    // Build form HTML with all editable event fields
     const form = modal.querySelector('form');
     form.innerHTML = `
         <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Modify event details below:</p>
@@ -437,9 +473,11 @@ function showModifyEventForm(event, modal, overlay) {
         </div>
     `;
     
+    // Bind form submission to collect changes and update event
     form.onsubmit = async (e) => {
         e.preventDefault();
         
+        // Collect modified field values, fallback to original if empty
         const name = document.getElementById('modify-event-name')?.value.trim();
         const startDate = document.getElementById('modify-event-start')?.value.trim();
         const endDate = document.getElementById('modify-event-end')?.value.trim();
@@ -447,6 +485,7 @@ function showModifyEventForm(event, modal, overlay) {
         const totalSeats = parseInt(document.getElementById('modify-event-seats')?.value || 0);
         
         try {
+            // Send update request to backend with modified event details
             const result = await window.api.eventModify({
                 ID: event.ID,
                 name: name || event.name,
@@ -456,6 +495,7 @@ function showModifyEventForm(event, modal, overlay) {
                 totalSeats: totalSeats || event.totalSeats
             });
             
+            // Handle success - close modal and refresh events table
             if (result.success) {
                 showMessage('Event updated successfully!', 'success');
                 modal.classList.add('hidden');
@@ -469,6 +509,7 @@ function showModifyEventForm(event, modal, overlay) {
         }
     };
     
+    // Bind back button to return to event ID lookup form
     document.getElementById('modify-back-btn').onclick = (e) => {
         e.preventDefault();
         openModifyRequest();
@@ -533,8 +574,9 @@ async function openDeleteEvent() {
     };
 }
 
-// ======================= EVENT DETAILS =======================
+// EVENT DETAILS
 async function openEventDetails() {
+    // Display list of events for user to select and view detailed info
     const result = await window.api.eventGetAll();
     
     if (!result.success || result.events.length === 0) {
@@ -564,7 +606,7 @@ async function openEventDetails() {
         </div>
     `).join('');
     
-    // Handle close button
+    // Handle close button to dismiss modal
     const closeBtn = modal.querySelector('.close');
     closeBtn.onclick = (e) => {
         e.preventDefault();
@@ -588,6 +630,7 @@ async function openEventDetails() {
 }
 
 async function selectEventDetail(eventID) {
+    // Load selected event details and switch to event details menu
     try {
         const result = await window.api.eventGetAll();
         const event = result.events.find(e => e.ID === eventID);
@@ -613,8 +656,9 @@ async function selectEventDetail(eventID) {
     }
 }
 
-// ======================= EVENT DETAILS PAGE =======================
+// EVENT DETAILS PAGE
 function updateEventDetailsMenu(event) {
+    // Render event details view with options to manage staff, vendors, and customers
     const detailsMenu = document.getElementById('details-menu');
     
     detailsMenu.innerHTML = `
@@ -650,6 +694,7 @@ function updateEventDetailsMenu(event) {
 }
 
 async function loadEventCounts(eventID) {
+    // Fetch and display count of staff and vendors for the event
     try {
         const staffCountResult = await window.api.getStaffCountByEvent(eventID);
         const vendorCountResult = await window.api.getVendorCountByEvent(eventID);
@@ -669,21 +714,27 @@ async function loadEventCounts(eventID) {
 }
 
 async function showCustomerDataPage() {
+    // Fetch and display all customers registered for event with fee status
+    
     if (!currentEventDetail) {
         showMessage('No event selected', 'error');
         return;
     }
     
     try {
+        // Retrieve all registrations linked to event from backend
         const result = await window.api.registrationGetByEvent(currentEventDetail.ID);
         const detailsMenu = document.getElementById('details-menu');
         
+        // Render table header with navigation controls
         let html = `<h2>${currentEventDetail.name} - Customer Data</h2>
             <button id="customer-data-back-btn" style="margin-bottom: 20px;">Back</button>`;
         
+        // Populate table with registration records or display empty state
         if (result.success && result.registrations && result.registrations.length > 0) {
             html += `<table class="events-table"><thead><tr><th>Customer Name</th><th>Customer Email</th><th>Ticket Number</th><th>Fee Status</th><th>Action</th></tr></thead><tbody>`;
             result.registrations.forEach(reg => {
+                // Toggle button state based on current fee status
                 const toggleStatus = reg.feeStatus === 'Paid' ? 'Unpaid' : 'Paid';
                 html += `<tr>
                     <td>${reg.customerName || 'N/A'}</td>
@@ -700,12 +751,12 @@ async function showCustomerDataPage() {
             html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No customers registered</p>';
         }
         
+        // Insert HTML into page
         detailsMenu.innerHTML = html;
         
-        // Store registrations for use in event delegation
+        // Store registrations for event delegation and handle fee toggle button clicks
         const registrationsData = result.registrations;
         
-        // Add event delegation for fee toggle
         detailsMenu.addEventListener('click', async (e) => {
             if (e.target.classList.contains('toggle-fee-btn')) {
                 const custID = parseInt(e.target.dataset.custId);
@@ -745,19 +796,24 @@ async function showCustomerDataPage() {
 }
 
 async function showEditStaffPage() {
+    // Display all staff members for event with options to add, edit, or delete
+    
     if (!currentViewEventId) {
         showMessage('No event selected', 'error');
         return;
     }
     
     try {
+        // Retrieve all staff records associated with event from backend
         const result = await window.api.staffGetByEvent(currentViewEventId);
         const detailsMenu = document.getElementById('details-menu');
         
+        // Render page header with action buttons for navigation and addition
         let html = `<h2>${currentEventDetail.name} - Manage Staff</h2>
             <button id="add-staff-btn" style="margin-bottom: 10px;">Add Staff</button>
             <button id="staff-back-btn" style="margin-bottom: 20px;">Back</button>`;
         
+        // Build table with staff records or display empty state
         if (result.success && result.staff && result.staff.length > 0) {
             html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Team</th><th>Position</th><th>Actions</th></tr></thead><tbody>`;
             result.staff.forEach(staff => {
@@ -780,9 +836,10 @@ async function showEditStaffPage() {
             html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No staff members</p>';
         }
         
+        // Render HTML to DOM
         detailsMenu.innerHTML = html;
         
-        // Add event delegation for staff actions
+        // Attach event delegation handlers for dynamic table interactions
         detailsMenu.addEventListener('click', async (e) => {
             if (e.target.classList.contains('edit-staff-btn')) {
                 const staffID = parseInt(e.target.dataset.staffId);
@@ -806,6 +863,8 @@ async function showEditStaffPage() {
 }
 
 function showEditStaffForm(staff) {
+    // Display form to edit selected staff member details
+    // Build HTML form with pre-filled staff information
     const detailsMenu = document.getElementById('details-menu');
     detailsMenu.innerHTML = `
         <h2>${currentEventDetail.name} - Edit Staff Member</h2>
@@ -832,25 +891,30 @@ function showEditStaffForm(staff) {
         </form>
     `;
     
+    // Bind form submission to collect changes and update staff record
     document.getElementById('edit-staff-form').onsubmit = async (e) => {
         e.preventDefault();
+        // Collect updated field values
         const name = document.getElementById('edit-staff-name').value.trim();
         const email = document.getElementById('edit-staff-email').value.trim();
         const team = document.getElementById('edit-staff-team').value.trim();
         const position = document.getElementById('edit-staff-position').value.trim();
         
+        // Validate all fields before sending to backend
         if (!name || !email || !team || !position) {
             showMessage('Please fill all fields', 'error');
             return;
         }
         
         try {
+            // Send update request to backend
             const result = await window.api.staffUpdate({
                 ID: staff.ID,
                 eventID: currentViewEventId,
                 name, email, team, position
             });
             
+            // Handle success - refresh staff list
             if (result.success) {
                 showMessage('Staff updated!', 'success');
                 await showEditStaffPage();
@@ -862,10 +926,13 @@ function showEditStaffForm(staff) {
         }
     };
     
+    // Bind cancel button to return to staff list
     document.getElementById('edit-staff-cancel-btn').onclick = showEditStaffPage;
 }
 
 function showAddStaffForm() {
+    // Display form to add new staff member to event
+    // Build form HTML for collecting staff information
     const detailsMenu = document.getElementById('details-menu');
     detailsMenu.innerHTML = `
         <h2>${currentEventDetail.name} - Add Staff Member</h2>
@@ -885,24 +952,29 @@ function showAddStaffForm() {
         </form>
     `;
     
+    // Bind form submission to collect staff details
     document.getElementById('add-staff-details-form').onsubmit = async (e) => {
         e.preventDefault();
+        // Collect all staff input field values
         const name = document.getElementById('staff-name-input').value.trim();
         const email = document.getElementById('staff-email-input').value.trim();
         const team = document.getElementById('staff-team-input').value.trim();
         const position = document.getElementById('staff-position-input').value.trim();
         
+        // Validate all fields are filled
         if (!name || !email || !team || !position) {
             showMessage('Please fill all fields', 'error');
             return;
         }
         
         try {
+            // Send add request to backend
             const result = await window.api.staffAdd({
                 eventID: currentViewEventId,
                 name, email, team, position
             });
             
+            // Handle success - refresh staff list
             if (result.success) {
                 showMessage('Staff added!', 'success');
                 await showEditStaffPage();
@@ -914,6 +986,7 @@ function showAddStaffForm() {
         }
     };
     
+    // Bind cancel button to return to staff list
     document.getElementById('staff-cancel-btn').onclick = showEditStaffPage;
 }
 
@@ -932,19 +1005,24 @@ async function deleteStaffMember(staffID) {
 }
 
 async function showEditVendorPage() {
+    // Display all vendors for event with options to add, edit, or delete
+    // Validate event context
     if (!currentViewEventId) {
         showMessage('No event selected', 'error');
         return;
     }
     
     try {
+        // Fetch all vendors for the event
         const result = await window.api.vendorGetByEvent(currentViewEventId);
         const detailsMenu = document.getElementById('details-menu');
         
+        // Build HTML with add button and page header
         let html = `<h2>${currentEventDetail.name} - Manage Vendors</h2>
             <button id="add-vendor-btn" style="margin-bottom: 10px;">Add Vendor</button>
             <button id="vendor-back-btn" style="margin-bottom: 20px;">Back</button>`;
         
+        // Build table with vendor data or empty message
         if (result.success && result.vendors && result.vendors.length > 0) {
             html += `<table class="events-table"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Product/Service</th><th>Charges Due</th><th>Actions</th></tr></thead><tbody>`;
             result.vendors.forEach(vendor => {
@@ -967,9 +1045,10 @@ async function showEditVendorPage() {
             html += '<p style="margin: 20px 0; padding: 20px; background: #f0f0f0; border-radius: 4px;">No vendors</p>';
         }
         
+        // Insert HTML into page
         detailsMenu.innerHTML = html;
         
-        // Add event delegation for vendor actions
+        // Setup event delegation for edit and delete buttons
         detailsMenu.addEventListener('click', async (e) => {
             if (e.target.classList.contains('edit-vendor-btn')) {
                 const vendorID = parseInt(e.target.dataset.vendorId);
@@ -985,6 +1064,7 @@ async function showEditVendorPage() {
             }
         });
         
+        // Bind button handlers for add and back navigation
         document.getElementById('add-vendor-btn').onclick = showAddVendorForm;
         document.getElementById('vendor-back-btn').onclick = () => updateEventDetailsMenu(currentEventDetail);
     } catch (error) {
@@ -993,6 +1073,8 @@ async function showEditVendorPage() {
 }
 
 function showEditVendorForm(vendor) {
+    // Display form to edit selected vendor details
+    // Build HTML form with pre-filled vendor information
     const detailsMenu = document.getElementById('details-menu');
     detailsMenu.innerHTML = `
         <h2>${currentEventDetail.name} - Edit Vendor</h2>
@@ -1019,25 +1101,30 @@ function showEditVendorForm(vendor) {
         </form>
     `;
     
+    // Bind form submission to collect changes and update vendor record
     document.getElementById('edit-vendor-form').onsubmit = async (e) => {
         e.preventDefault();
+        // Collect updated field values
         const name = document.getElementById('edit-vendor-name').value.trim();
         const email = document.getElementById('edit-vendor-email').value.trim();
         const prod_serv = document.getElementById('edit-vendor-service').value.trim();
         const chargesDue = parseFloat(document.getElementById('edit-vendor-charges').value || 0);
         
+        // Validate required fields before sending to backend
         if (!name || !email || !prod_serv) {
             showMessage('Please fill required fields', 'error');
             return;
         }
         
         try {
+            // Send update request to backend
             const result = await window.api.vendorUpdate({
                 ID: vendor.ID,
                 eventID: currentViewEventId,
                 name, email, prod_serv, chargesDue
             });
             
+            // Step 6: Handle success - refresh vendor list
             if (result.success) {
                 showMessage('Vendor updated!', 'success');
                 await showEditVendorPage();
@@ -1049,10 +1136,13 @@ function showEditVendorForm(vendor) {
         }
     };
     
+    // Bind cancel button to return to vendor list
     document.getElementById('edit-vendor-cancel-btn').onclick = showEditVendorPage;
 }
 
 function showAddVendorForm() {
+    // Display form to add new vendor to event
+    // Build form HTML for collecting vendor information
     const detailsMenu = document.getElementById('details-menu');
     detailsMenu.innerHTML = `
         <h2>${currentEventDetail.name} - Add Vendor</h2>
@@ -1072,24 +1162,29 @@ function showAddVendorForm() {
         </form>
     `;
     
+    // Bind form submission to collect vendor details
     document.getElementById('add-vendor-details-form').onsubmit = async (e) => {
         e.preventDefault();
+        // Collect all vendor input field values
         const name = document.getElementById('vendor-name-input').value.trim();
         const email = document.getElementById('vendor-email-input').value.trim();
         const prod_serv = document.getElementById('vendor-service-input').value.trim();
         const chargesDue = parseFloat(document.getElementById('vendor-charges-input').value || 0);
         
+        // Validate required fields are filled
         if (!name || !email || !prod_serv) {
             showMessage('Please fill required fields', 'error');
             return;
         }
         
         try {
+            // Send add request to backend
             const result = await window.api.vendorAdd({
                 eventID: currentViewEventId,
                 name, email, prod_serv, chargesDue
             });
             
+            // Handle success - refresh vendor list
             if (result.success) {
                 showMessage('Vendor added!', 'success');
                 await showEditVendorPage();
@@ -1101,6 +1196,7 @@ function showAddVendorForm() {
         }
     };
     
+    // Bind cancel button to return to vendor list
     document.getElementById('vendor-cancel-btn').onclick = showEditVendorPage;
 }
 
@@ -1118,7 +1214,7 @@ async function deleteVendor(vendorID) {
     }
 }
 
-// ======================= CUSTOMER REGISTRATION =======================
+// CUSTOMER REGISTRATION
 function createRegisterEventModal() {
     const modal = document.createElement('div');
     modal.id = 'register-event-modal';
@@ -1143,25 +1239,30 @@ function createRegisterEventModal() {
 }
 
 async function openRegisterEvent() {
-    const modal = document.getElementById('register-event-modal');
-    const overlay = document.getElementById('modal-overlay');
-    
+    // Display modal for customer to register for an event by event ID
+    // Validate customer login before allowing registration
     if (!currentUser || !currentUser.ID) {
         showMessage('Please login first', 'error');
         return;
     }
     
-    // Clear previous input values
+    // Get modal and overlay, clear previous input
+    const modal = document.getElementById('register-event-modal');
+    const overlay = document.getElementById('modal-overlay');
+    
     const registerForm = document.getElementById('register-event-form');
     if (registerForm) registerForm.reset();
     document.getElementById('register-event-id').value = '';
     
+    // Show modal and overlay
     modal.classList.remove('hidden');
     overlay.classList.remove('hidden');
     
+    // Bind form submission to handle event registration
     const form = modal.querySelector('#register-event-form');
     form.onsubmit = async (e) => {
         e.preventDefault();
+        // Collect and validate event ID input
         const eventID = parseInt(document.getElementById('register-event-id').value || 0);
         
         if (!eventID) {
@@ -1170,7 +1271,7 @@ async function openRegisterEvent() {
         }
 
         try {
-            // Validate event exists
+            // Verify event exists before allowing registration
             const eventsResult = await window.api.eventGetAll();
             const eventExists = eventsResult.success && eventsResult.events?.some(ev => ev.ID === eventID);
             
@@ -1179,11 +1280,13 @@ async function openRegisterEvent() {
                 return;
             }
 
+            // Send registration request to backend
             const res = await window.api.customerRegister({
                 custID: currentUser.ID,
                 eventID
             });
             
+            // Handle success - close modal and refresh customer events table
             if (res && res.success) {
                 showMessage(`Registered! Ticket #${res.ticketNum || ''}`, 'success');
                 modal.classList.add('hidden');
@@ -1201,19 +1304,24 @@ async function openRegisterEvent() {
 
 // View registrations
 async function openRegistrationsModal() {
+    // Display all registrations for the logged-in customer
+    // Validate customer is logged in before showing registrations
     if (!currentUser || !currentUser.ID) {
         showMessage('Please login to view registrations', 'error');
         return;
     }
 
     try {
+        // Fetch all registrations for the customer from backend
         const res = await window.api.customerGetRegistrations(currentUser.ID);
 
+        // Check if registrations exist
         if (!res.success || !res.registrations || res.registrations.length === 0) {
             showMessage('No registrations yet', 'info');
             return;
         }
 
+        // Build HTML table with registration details and back button
         const menu = document.getElementById('customer-event-menu');
         let html = `<h2>My Registrations</h2>
             <button id="registrations-back-btn" style="margin-bottom: 20px;">Back to Events</button>
@@ -1228,6 +1336,7 @@ async function openRegistrationsModal() {
                 </thead>
                 <tbody>`;
         
+        // Create table row for each registration with event and ticket info
         res.registrations.forEach(r => {
             const eventName = r.eventName || `Event ${r.eventID}`;
             html += `<tr>
@@ -1240,6 +1349,7 @@ async function openRegistrationsModal() {
         
         html += `</tbody></table>`;
         
+        // Insert table into page
         menu.innerHTML = html;
         
         // Bind the back button immediately after setting innerHTML
@@ -1254,8 +1364,9 @@ async function openRegistrationsModal() {
     }
 }
 
-// ======================= INITIALIZE APP =======================
+// INITIALIZE APP
 function initializeApp() {
+    // Set up event listeners for all buttons on app startup
     // Main menu buttons
     const orgBtn = document.getElementById('org-btn');
     const custBtn = document.getElementById('cust-btn');
@@ -1341,6 +1452,7 @@ document.addEventListener('DOMContentLoaded', initializeApp);
 // Add these functions after the openLogin function:
 
 async function loadOrganizerEvents() {
+    // Fetch all events and filter to show only those created by current organiser
     try {
         const result = await window.api.eventGetAll();
         
@@ -1378,9 +1490,9 @@ async function loadOrganizerEvents() {
 }
 
 function showCustomerEventMenu() {
+    // Display customer menu with options to register and view registrations
     const customerMenu = document.getElementById('customer-event-menu');
     
-    // Recreate the entire menu HTML
     customerMenu.innerHTML = `
         <h2>Customer - Events</h2>
         <button id="register-event-btn" style="margin-bottom: 10px;">Register for Event</button>
@@ -1404,7 +1516,7 @@ function showCustomerEventMenu() {
         </table>
     `;
     
-    // Now bind the event listeners to the newly created buttons
+    // Bind event listeners to newly created buttons
     const registerBtn = document.getElementById('register-event-btn');
     const viewRegsBtn = document.getElementById('view-registrations-btn');
     const backBtn = document.getElementById('customer-events-back-btn');
