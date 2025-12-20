@@ -554,7 +554,6 @@ async function openEventDetails() {
             <div id="events-list" style="max-height: 400px; overflow-y: auto;"></div>
         </div>
     `;
-    modal.id = 'event-select-modal';
     document.body.appendChild(modal);
     
     const eventsList = modal.querySelector('#events-list');
@@ -564,6 +563,16 @@ async function openEventDetails() {
             <small>${event.venue} | ${event.startDate}</small>
         </div>
     `).join('');
+    
+    // Handle close button
+    const closeBtn = modal.querySelector('.close');
+    closeBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        modal.remove();
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    };
     
     // Add event delegation for event selection
     eventsList.addEventListener('click', (e) => {
