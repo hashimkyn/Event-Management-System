@@ -300,6 +300,15 @@ button:hover {
     margin: 0;
 }
 
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-body {
+    margin: 15px 0;
+    line-height: 1.5;
+}
+
 .close {
     background: none;
     border: none;

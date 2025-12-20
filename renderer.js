@@ -26,6 +26,39 @@ function showMessage(text, type = 'info', timeout = 3500) {
     setTimeout(() => toast.remove(), timeout);
 }
 
+// Delete confirmation modal helper
+function showDeleteConfirmation(itemType) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('delete-confirmation-modal');
+        const titleEl = document.getElementById('delete-confirmation-title');
+        const messageEl = document.getElementById('delete-confirmation-message');
+        const confirmBtn = document.getElementById('delete-confirm-btn');
+        const cancelBtn = document.querySelector('[data-close="delete-confirmation-modal"]');
+        
+        titleEl.textContent = `Delete ${itemType}?`;
+        messageEl.textContent = `Are you sure you want to delete this ${itemType.toLowerCase()}? This action cannot be undone.`;
+        
+        modal.classList.remove('hidden');
+        
+        const handleConfirm = () => {
+            modal.classList.add('hidden');
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(true);
+        };
+        
+        const handleCancel = () => {
+            modal.classList.add('hidden');
+            confirmBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(false);
+        };
+        
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+    });
+}
+
 // Show menu helper
 function showMenu(menuId) {
     Object.values(menus).forEach(menu => {
@@ -749,7 +782,8 @@ async function showEditStaffPage() {
             }
             if (e.target.classList.contains('delete-staff-btn')) {
                 const staffID = parseInt(e.target.dataset.staffId);
-                if (confirm('Are you sure you want to delete this staff member?')) {
+                const confirmed = await showDeleteConfirmation('Staff Member');
+                if (confirmed) {
                     await deleteStaffMember(staffID);
                 }
             }
@@ -935,7 +969,8 @@ async function showEditVendorPage() {
             }
             if (e.target.classList.contains('delete-vendor-btn')) {
                 const vendorID = parseInt(e.target.dataset.vendorId);
-                if (confirm('Are you sure you want to delete this vendor?')) {
+                const confirmed = await showDeleteConfirmation('Vendor');
+                if (confirmed) {
                     await deleteVendor(vendorID);
                 }
             }

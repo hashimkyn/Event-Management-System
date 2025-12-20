@@ -11,13 +11,40 @@ char CUST_FILE[] = "customers.dat";
 char REG_FILE[] = "registrations.dat";
 char STAFF_FILE[] = "staff.dat";
 char VENDOR_FILE[] = "vendors.dat";
-// Note: Events use events.json (handled by frontend)
+// Note: Events use events.json
 
 // ========================== ENUM DEFINITIONS ==========================
 enum EventType { MUN = 1, OLYMPIAD, SEMINAR, CEREMONY, FESTIVAL, CONCERT, CUSTOM };
-enum UserType { ORGANISER = 1, CUSTOMER = 2 };
-enum AuthChoice { SIGNUP = 1, LOGIN = 2 };
-enum EventMenuChoice { ADD_EVENT = 1, VIEW_EVENTS = 2, MODIFY_EVENT = 3, DELETE_EVENT = 4, EXIT_MENU = 0 };
+
+// Operation codes for backend operations
+enum OperationCode {
+    // Authentication operations (1-4)
+    OP_ORGANISER_SIGNUP = 1,
+    OP_ORGANISER_LOGIN = 2,
+    OP_CUSTOMER_SIGNUP = 3,
+    OP_CUSTOMER_LOGIN = 4,
+    
+    // Registration operations (10-12)
+    OP_GET_REGISTRATIONS_BY_EVENT = 10,
+    OP_UPDATE_REGISTRATION_FEE_STATUS = 11,
+    OP_ADD_REGISTRATION = 12,
+    
+    // Staff operations (13-15, 19)
+    OP_ADD_STAFF = 13,
+    OP_GET_STAFF_BY_EVENT = 14,
+    OP_DELETE_STAFF = 15,
+    OP_UPDATE_STAFF = 19,
+    
+    // Vendor operations (16-18, 20)
+    OP_ADD_VENDOR = 16,
+    OP_GET_VENDORS_BY_EVENT = 17,
+    OP_DELETE_VENDOR = 18,
+    OP_UPDATE_VENDOR = 20,
+    
+    // Counting operations (21-22, recursive)
+    OP_GET_STAFF_COUNT = 21,
+    OP_GET_VENDOR_COUNT = 22
+};
 
 // ========================== STRUCT DEFINITIONS ==========================
 struct Organiser {
@@ -68,7 +95,7 @@ bool searchOrganiserID(int targetID) {
     ifstream file(ORG_FILE, ios::binary);
     if (!file) return false;
     Organiser org;
-    while (file.read((char*)&org, sizeof(Organiser))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&org)), sizeof(Organiser))) {
         if (org.ID == targetID) {
             file.close();
             return true;
@@ -82,7 +109,7 @@ bool searchCustomerID(int targetID) {
     ifstream file(CUST_FILE, ios::binary);
     if (!file) return false;
     Customer cust;
-    while (file.read((char*)&cust, sizeof(Customer))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&cust)), sizeof(Customer))) {
         if (cust.ID == targetID) {
             file.close();
             return true;
@@ -101,7 +128,7 @@ bool searchStaffID(int targetID) {
     ifstream file(STAFF_FILE, ios::binary);
     if (!file) return false;
     Staff staff;
-    while (file.read((char*)&staff, sizeof(Staff))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.ID == targetID) {
             file.close();
             return true;
@@ -115,7 +142,7 @@ bool searchVendorID(int targetID) {
     ifstream file(VENDOR_FILE, ios::binary);
     if (!file) return false;
     Vendor vendor;
-    while (file.read((char*)&vendor, sizeof(Vendor))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.ID == targetID) {
             file.close();
             return true;
@@ -129,7 +156,7 @@ bool searchRegistration(int eventID, int custID) {
     ifstream file(REG_FILE, ios::binary);
     if (!file) return false;
     Registration reg;
-    while (file.read((char*)&reg, sizeof(Registration))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration))) {
         if (reg.customerID == custID && reg.eventID == eventID) {
             file.close();
             return true;
@@ -156,7 +183,7 @@ void organiserSignup() {
     cin.getline(org.password, 20);
     
     ofstream file(ORG_FILE, ios::binary | ios::app);
-    file.write((char*)&org, sizeof(Organiser));
+    file.write(static_cast<char*>(static_cast<void*>(&org)), sizeof(Organiser));
     file.close();
     
     cout << "ORGANISER registered successfully!" << endl;
@@ -179,7 +206,7 @@ void organiserLogin() {
     }
     
     Organiser org;
-    while (file.read((char*)&org, sizeof(Organiser))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&org)), sizeof(Organiser))) {
         if (strcmp(org.username, username) == 0 && strcmp(org.password, password) == 0) {
             cout << "ORGANISER LOGIN SUCCESS" << endl;
             cout << "ID: " << org.ID << " Name: " << org.name << " Email: " << org.email << endl;
@@ -211,7 +238,7 @@ void customerSignup() {
     cin.getline(cust.password, 20);
     
     ofstream file(CUST_FILE, ios::binary | ios::app);
-    file.write((char*)&cust, sizeof(Customer));
+    file.write(static_cast<char*>(static_cast<void*>(&cust)), sizeof(Customer));
     file.close();
     
     cout << "CUSTOMER registered successfully!" << endl;
@@ -234,7 +261,7 @@ void customerLogin() {
     }
     
     Customer cust;
-    while (file.read((char*)&cust, sizeof(Customer))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&cust)), sizeof(Customer))) {
         if (strcmp(cust.username, username) == 0 && strcmp(cust.password, password) == 0) {
             cout << "CUSTOMER LOGIN SUCCESS" << endl;
             cout << "ID: " << cust.ID << " Name: " << cust.name << " Email: " << cust.email << endl;
@@ -271,7 +298,7 @@ void addEvent() {
     cin >> event.totalSeats;
     int typeVal;
     cin >> typeVal;
-    event.type = (EventType)typeVal;
+    event.type = static_cast<EventType>(typeVal);
     
     // Events are stored as JSON via frontend, not in binary format
     cout << "Event added successfully!" << endl;
@@ -334,7 +361,7 @@ void addStaff(int eventID) {
     cin.getline(staff.position, 20);
     
     ofstream file(STAFF_FILE, ios::binary | ios::app);
-    file.write((char*)&staff, sizeof(Staff));
+    file.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
     file.close();
     
     cout << "Staff member added successfully!" << endl;
@@ -351,7 +378,7 @@ void viewStaff(int eventID) {
     
     Staff staff;
     bool found = false;
-    while (file.read((char*)&staff, sizeof(Staff))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.eventID == eventID) {
             cout << "ID: " << staff.ID << " Name: " << staff.name << " Email: " << staff.email 
                  << " Team: " << staff.team << " Position: " << staff.position << endl;
@@ -378,9 +405,9 @@ void deleteStaff() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Staff staff;
-    while (fileRead.read((char*)&staff, sizeof(Staff))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.ID != staffID) {
-            fileWrite.write((char*)&staff, sizeof(Staff));
+            fileWrite.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
         }
     }
     
@@ -413,7 +440,7 @@ void addVendor(int eventID) {
     cin >> vendor.chargesDue;
     
     ofstream file(VENDOR_FILE, ios::binary | ios::app);
-    file.write((char*)&vendor, sizeof(Vendor));
+    file.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
     file.close();
     
     cout << "Vendor added successfully!" << endl;
@@ -430,7 +457,7 @@ void viewVendors(int eventID) {
     
     Vendor vendor;
     bool found = false;
-    while (file.read((char*)&vendor, sizeof(Vendor))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.eventID == eventID) {
             cout << "ID: " << vendor.ID << " Name: " << vendor.name << " Email: " << vendor.email 
                  << " Product/Service: " << vendor.prod_serv << " Charges: " << vendor.chargesDue << endl;
@@ -457,9 +484,9 @@ void deleteVendor() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Vendor vendor;
-    while (fileRead.read((char*)&vendor, sizeof(Vendor))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.ID != vendorID) {
-            fileWrite.write((char*)&vendor, sizeof(Vendor));
+            fileWrite.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
         }
     }
     
@@ -484,7 +511,7 @@ void addRegistration() {
     cin.getline(reg.feeStatus, 10);
     
     ofstream file(REG_FILE, ios::binary | ios::app);
-    file.write((char*)&reg, sizeof(Registration));
+    file.write(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration));
     file.close();
     
     cout << "Registration added successfully!" << endl;
@@ -504,7 +531,7 @@ void getRegistrationsByCustomer() {
     
     Registration reg;
     bool found = false;
-    while (file.read((char*)&reg, sizeof(Registration))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration))) {
         if (reg.customerID == custID) {
             cout << "ID: " << reg.customerID << " EventID: " << reg.eventID 
                  << " Ticket: " << reg.ticketNum << " Status: " << reg.feeStatus << endl;
@@ -530,7 +557,7 @@ void getRegistrationsByEvent() {
     
     Registration reg;
     bool found = false;
-    while (file.read((char*)&reg, sizeof(Registration))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration))) {
         if (reg.eventID == eventID) {
             // Look up customer details from customers.dat
             ifstream custFile(CUST_FILE, ios::binary);
@@ -539,7 +566,7 @@ void getRegistrationsByEvent() {
             char custEmail[50] = "unknown@email.com";
             bool customerFound = false;
             
-            while (custFile.read((char*)&cust, sizeof(Customer))) {
+            while (custFile.read(static_cast<char*>(static_cast<void*>(&cust)), sizeof(Customer))) {
                 if (cust.ID == reg.customerID) {
                     strcpy(custName, cust.name);
                     strcpy(custEmail, cust.email);
@@ -579,7 +606,7 @@ void updateRegistrationFeeStatus() {
     Registration reg;
     bool found = false;
     int totalRegs = 0;
-    while (fileRead.read((char*)&reg, sizeof(Registration))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration))) {
         totalRegs++;
         cerr << "DEBUG: Checking reg - custID=" << reg.customerID << ", eventID=" << reg.eventID << endl;
         if (reg.customerID == custID && reg.eventID == eventID) {
@@ -587,7 +614,7 @@ void updateRegistrationFeeStatus() {
             found = true;
             cerr << "DEBUG: Found matching registration, updating feeStatus to " << feeStatus << endl;
         }
-        fileWrite.write((char*)&reg, sizeof(Registration));
+        fileWrite.write(static_cast<char*>(static_cast<void*>(&reg)), sizeof(Registration));
     }
     
     fileRead.close();
@@ -624,7 +651,7 @@ void addStaffToFile() {
     cin.getline(staff.position, 20);
     
     ofstream file(STAFF_FILE, ios::binary | ios::app);
-    file.write((char*)&staff, sizeof(Staff));
+    file.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
     file.close();
     
     cout << "Staff member added successfully!" << endl;
@@ -645,7 +672,7 @@ void getStaffByEventFile() {
     
     Staff staff;
     bool found = false;
-    while (file.read((char*)&staff, sizeof(Staff))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.eventID == eventID) {
             cout << "ID: " << staff.ID << " Name: " << staff.name << " Email: " << staff.email 
                  << " Team: " << staff.team << " Position: " << staff.position << endl;
@@ -672,9 +699,9 @@ void deleteStaffFromFile() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Staff staff;
-    while (fileRead.read((char*)&staff, sizeof(Staff))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.ID != staffID) {
-            fileWrite.write((char*)&staff, sizeof(Staff));
+            fileWrite.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
         }
     }
     
@@ -709,14 +736,14 @@ void updateStaffInFile() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Staff staff;
-    while (fileRead.read((char*)&staff, sizeof(Staff))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff))) {
         if (staff.ID == staffID) {
             strcpy(staff.name, name);
             strcpy(staff.email, email);
             strcpy(staff.team, team);
             strcpy(staff.position, position);
         }
-        fileWrite.write((char*)&staff, sizeof(Staff));
+        fileWrite.write(static_cast<char*>(static_cast<void*>(&staff)), sizeof(Staff));
     }
     
     fileRead.close();
@@ -747,7 +774,7 @@ void addVendorToFile() {
     cin >> vendor.chargesDue;
     
     ofstream file(VENDOR_FILE, ios::binary | ios::app);
-    file.write((char*)&vendor, sizeof(Vendor));
+    file.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
     file.close();
     
     cout << "Vendor added successfully!" << endl;
@@ -768,7 +795,7 @@ void getVendorsByEventFile() {
     
     Vendor vendor;
     bool found = false;
-    while (file.read((char*)&vendor, sizeof(Vendor))) {
+    while (file.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.eventID == eventID) {
             cout << "ID: " << vendor.ID << " Name: " << vendor.name << " Email: " << vendor.email 
                  << " Product/Service: " << vendor.prod_serv << " Charges: " << vendor.chargesDue << endl;
@@ -795,9 +822,9 @@ void deleteVendorFromFile() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Vendor vendor;
-    while (fileRead.read((char*)&vendor, sizeof(Vendor))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.ID != vendorID) {
-            fileWrite.write((char*)&vendor, sizeof(Vendor));
+            fileWrite.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
         }
     }
     
@@ -833,14 +860,14 @@ void updateVendorInFile() {
     ofstream fileWrite("temp.dat", ios::binary);
     
     Vendor vendor;
-    while (fileRead.read((char*)&vendor, sizeof(Vendor))) {
+    while (fileRead.read(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor))) {
         if (vendor.ID == vendorID) {
             strcpy(vendor.name, name);
             strcpy(vendor.email, email);
             strcpy(vendor.prod_serv, prod_serv);
             vendor.chargesDue = chargesDue;
         }
-        fileWrite.write((char*)&vendor, sizeof(Vendor));
+        fileWrite.write(static_cast<char*>(static_cast<void*>(&vendor)), sizeof(Vendor));
     }
     
     fileRead.close();
@@ -885,7 +912,7 @@ void getStaffCountByEvent() {
 
     vector<Staff> staff;
     Staff s;
-    while (inFile.read((char*)&s, sizeof(Staff))) {
+    while (inFile.read(static_cast<char*>(static_cast<void*>(&s)), sizeof(Staff))) {
         staff.push_back(s);
     }
     inFile.close();
@@ -906,7 +933,7 @@ void getVendorCountByEvent() {
 
     vector<Vendor> vendors;
     Vendor v;
-    while (inFile.read((char*)&v, sizeof(Vendor))) {
+    while (inFile.read(static_cast<char*>(static_cast<void*>(&v)), sizeof(Vendor))) {
         vendors.push_back(v);
     }
     inFile.close();
@@ -915,128 +942,75 @@ void getVendorCountByEvent() {
     cout << "Vendor Count: " << count << endl;
 }
 
-/* ======================= ORGANISER EVENT MENU ======================= */
-void organiserEventMenu() {
-    int choice;
-    while (cin >> choice) {
-        if (choice == ADD_EVENT) {
-            addEvent();
-        } else if (choice == VIEW_EVENTS) {
-            viewEvents();
-        } else if (choice == MODIFY_EVENT) {
-            modifyEvent();
-        } else if (choice == DELETE_EVENT) {
-            deleteEvent();
-        } else if (choice == EXIT_MENU) {
-            break;
-        }
-    }
-}
-
-/* ======================= MAIN MENU ======================= */
+/* ======================= MAIN ENTRY POINT ======================= */
 int main() {
     srand((unsigned)time(0));
     
-    int userType;
+    int operation;
+    cin >> operation;
     
-    while (cin >> userType) {
-        // Handle operation codes 10+ (registrations, staff, vendors)
-        if (userType >= 10) {
-            int operation = userType;
-            switch (operation) {
-                case 10:  // Get registrations by event
-                    getRegistrationsByEvent();
-                    break;
-                case 11:  // Update registration fee status
-                    updateRegistrationFeeStatus();
-                    break;
-                case 12:  // Add registration
-                    addRegistration();
-                    break;
-                case 13:  // Add staff
-                    addStaffToFile();
-                    break;
-                case 14:  // Get staff by event
-                    getStaffByEventFile();
-                    break;
-                case 15:  // Delete staff
-                    deleteStaffFromFile();
-                    break;
-                case 16:  // Add vendor
-                    addVendorToFile();
-                    break;
-                case 17:  // Get vendors by event
-                    getVendorsByEventFile();
-                    break;
-                case 18:  // Delete vendor
-                    deleteVendorFromFile();
-                    break;
-                case 19:  // Update staff
-                    updateStaffInFile();
-                    break;
-                case 20:  // Update vendor
-                    updateVendorInFile();
-                    break;
-                case 21:  // Get staff count by event (recursive)
-                    getStaffCountByEvent();
-                    break;
-                case 22:  // Get vendor count by event (recursive)
-                    getVendorCountByEvent();
-                    break;
-            }
-            
-            // Read exit signal
-            int exitChoice;
-            if (!(cin >> exitChoice)) {
-                break;
-            }
-            if (exitChoice == 0) {
-                break;
-            }
-            continue;
-        }
-        
-        switch (userType) {
-            case ORGANISER: {  // Organiser
-                int choice;
-                cin >> choice;
-                
-                switch (choice) {
-                    case SIGNUP:
-                        organiserSignup();
-                        break;
-                    case LOGIN:
-                        organiserLogin();
-                        // After successful login, handle organiser menu
-                        organiserEventMenu();
-                        break;
-                }
-                break;
-            }
-            case CUSTOMER: {  // Customer
-                int choice;
-                cin >> choice;
-                
-                switch (choice) {
-                    case SIGNUP:
-                        customerSignup();
-                        break;
-                    case LOGIN:
-                        customerLogin();
-                        break;
-                }
-                break;
-            }
-        }
-        
-        // Read exit signal
-        int exitChoice;
-        if (!(cin >> exitChoice)) {
+    // Handle all operation codes (single operation per execution)
+    switch (static_cast<OperationCode>(operation)) {
+        // Authentication operations
+        case OP_ORGANISER_SIGNUP:
+            organiserSignup();
             break;
-        }
-        if (exitChoice == 0) {
+        case OP_ORGANISER_LOGIN:
+            organiserLogin();
             break;
-        }
+        case OP_CUSTOMER_SIGNUP:
+            customerSignup();
+            break;
+        case OP_CUSTOMER_LOGIN:
+            customerLogin();
+            break;
+        
+        // Registration operations
+        case OP_GET_REGISTRATIONS_BY_EVENT:
+            getRegistrationsByEvent();
+            break;
+        case OP_UPDATE_REGISTRATION_FEE_STATUS:
+            updateRegistrationFeeStatus();
+            break;
+        case OP_ADD_REGISTRATION:
+            addRegistration();
+            break;
+        
+        // Staff operations
+        case OP_ADD_STAFF:
+            addStaffToFile();
+            break;
+        case OP_GET_STAFF_BY_EVENT:
+            getStaffByEventFile();
+            break;
+        case OP_DELETE_STAFF:
+            deleteStaffFromFile();
+            break;
+        case OP_UPDATE_STAFF:
+            updateStaffInFile();
+            break;
+        
+        // Vendor operations
+        case OP_ADD_VENDOR:
+            addVendorToFile();
+            break;
+        case OP_GET_VENDORS_BY_EVENT:
+            getVendorsByEventFile();
+            break;
+        case OP_DELETE_VENDOR:
+            deleteVendorFromFile();
+            break;
+        case OP_UPDATE_VENDOR:
+            updateVendorInFile();
+            break;
+        
+        // Counting operations (recursive)
+        case OP_GET_STAFF_COUNT:
+            getStaffCountByEvent();
+            break;
+        case OP_GET_VENDOR_COUNT:
+            getVendorCountByEvent();
+            break;
     }
     
     return 0;

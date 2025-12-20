@@ -562,6 +562,22 @@
     </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="delete-confirmation-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="delete-confirmation-title">Confirm Delete</h3>
+            <button class="close" data-close="delete-confirmation-modal">×</button>
+        </div>
+        <div class="modal-body">
+            <p id="delete-confirmation-message">Are you sure you want to delete this item?</p>
+        </div>
+        <div class="modal-actions">
+            <button type="button" id="delete-confirm-btn" class="btn-primary">Confirm</button>
+            <button type="button" data-close="delete-confirmation-modal" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <script defer src="renderer.js"></script>
 
